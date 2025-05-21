@@ -1,0 +1,55 @@
+/* styles/variables.css */
+:root {
+    /* TM Colors */
+    --tm-orange: #FF6B00;
+    --tm-blue: #003D7C;
+    --tm-light-blue: #0080C8;
+    
+    /* Supporting colors */
+    --tm-light-orange: #FF9C59;
+    --tm-dark-orange: #CC5600;
+    --tm-very-light-blue: #E5F0F9;
+    
+    /* Neutral colors */
+    --white: #FFFFFF;
+    --off-white: #F5F5F5;
+    --light-gray: #E0E0E0;
+    --medium-gray: #9E9E9E;
+    --dark-gray: #555555;
+    --black: #212121;
+    
+    /* Font sizes */
+    --font-xs: 0.75rem;
+    --font-sm: 0.875rem;
+    --font-md: 1rem;
+    --font-lg: 1.25rem;
+    --font-xl: 1.5rem;
+    --font-xxl: 2rem;
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-xxl: 3rem;
+    
+    /* Borders */
+    --border-radius-sm: 0.25rem;
+    --border-radius-md: 0.5rem;
+    --border-radius-lg: 1rem;
+    --border-radius-xl: 1.5rem;
+    --border-radius-xxl: 2rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.15);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+    --transition-slow: 0.5s ease;
+  }
+  

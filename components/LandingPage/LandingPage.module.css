@@ -1,0 +1,313 @@
+/* components/LandingPage/LandingPage.module.css */
+.landingPage {
+    font-family: 'Inter', sans-serif;
+    color: var(--black);
+    background-color: var(--off-white);
+  }
+  
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+  }
+  
+  /* Header */
+  .header {
+    padding: var(--space-md) 0;
+    background-color: var(--white);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .headerContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-lg);
+  }
+  
+  .logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--tm-orange) 0%, var(--tm-light-orange) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--white);
+  }
+  
+  .navigation {
+    display: flex;
+    gap: var(--space-xl);
+  }
+  
+  .navigation a {
+    color: var(--dark-gray);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition-medium);
+  }
+  
+  .navigation a:hover {
+    color: var(--tm-orange);
+  }
+  
+  /* Hero Section */
+  .hero {
+    padding: var(--space-xxl) 0;
+    background: linear-gradient(135deg, var(--very-light-blue) 0%, var(--off-white) 100%);
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+  }
+  
+  .heroContent {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .hero h1 {
+    font-size: var(--font-xxl);
+    margin-bottom: var(--space-lg);
+    color: var(--tm-blue);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .hero p {
+    font-size: var(--font-lg);
+    color: var(--dark-gray);
+    margin-bottom: var(--space-xl);
+    line-height: 1.6;
+  }
+  
+  .heroCta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: var(--space-xl);
+  }
+  
+  .heroCta button {
+    background: linear-gradient(90deg, var(--tm-blue) 0%, var(--tm-light-blue) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: var(--space-md) var(--space-xl);
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-medium);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .heroCta button:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+  
+  .arrowContainer {
+    margin-top: var(--space-xl);
+  }
+  
+  .arrow {
+    color: var(--tm-blue);
+  }
+  
+  /* Features Section */
+  .features {
+    padding: var(--space-xxl) 0;
+    background-color: var(--white);
+  }
+  
+  .features h2 {
+    text-align: center;
+    font-size: var(--font-xl);
+    color: var(--tm-blue);
+    margin-bottom: var(--space-xxl);
+  }
+  
+  .featuresGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-xl);
+  }
+  
+  .featureCard {
+    background-color: var(--off-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-medium);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .featureCard:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .featureIcon {
+    color: var(--tm-orange);
+    margin-bottom: var(--space-lg);
+  }
+  
+  .featureCard h3 {
+    font-size: var(--font-lg);
+    color: var(--tm-blue);
+    margin-bottom: var(--space-md);
+  }
+  
+  .featureCard p {
+    color: var(--dark-gray);
+    line-height: 1.6;
+  }
+  
+  /* About Section */
+  .about {
+    padding: var(--space-xxl) 0;
+    background: linear-gradient(135deg, var(--off-white) 0%, var(--very-light-blue) 100%);
+  }
+  
+  .aboutContent {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .about h2 {
+    font-size: var(--font-xl);
+    color: var(--tm-blue);
+    margin-bottom: var(--space-lg);
+    text-align: center;
+  }
+  
+  .about p {
+    font-size: var(--font-md);
+    color: var(--dark-gray);
+    line-height: 1.8;
+    margin-bottom: var(--space-lg);
+  }
+  
+  /* FAQ Section */
+  .faq {
+    padding: var(--space-xxl) 0;
+    background-color: var(--white);
+  }
+  
+  .faq h2 {
+    text-align: center;
+    font-size: var(--font-xl);
+    color: var(--tm-blue);
+    margin-bottom: var(--space-xxl);
+  }
+  
+  .faqList {
+    display: grid;
+    gap: var(--space-xl);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .faqItem {
+    background-color: var(--off-white);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .faqItem h3 {
+    font-size: var(--font-lg);
+    color: var(--tm-blue);
+    margin-bottom: var(--space-md);
+  }
+  
+  .faqItem p {
+    color: var(--dark-gray);
+    line-height: 1.6;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: var(--space-xl) 0;
+    background-color: var(--tm-blue);
+    color: var(--white);
+  }
+  
+  .footerContent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .footerLogo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--tm-orange) 0%, var(--tm-light-orange) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: var(--font-xl);
+    }
+    
+    .hero p {
+      font-size: var(--font-md);
+    }
+    
+    .navigation {
+      gap: var(--space-lg);
+    }
+    
+    .featuresGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .hero {
+      padding: var(--space-xl) 0;
+    }
+    
+    .container {
+      padding: 0 var(--space-md);
+    }
+    
+    .headerContent {
+      padding: 0 var(--space-md);
+    }
+    
+    .navigation {
+      gap: var(--space-md);
+    }
+    
+    .heroCta button {
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--font-sm);
+    }
+    
+    .featureCard {
+      padding: var(--space-lg);
+    }
+    
+    .faqItem {
+      padding: var(--space-lg);
+    }
+  }
+  

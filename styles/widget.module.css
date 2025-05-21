@@ -1,0 +1,28 @@
+/* styles/widget.module.css */
+.widgetPage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--space-xl);
+    background: linear-gradient(135deg, var(--very-light-blue) 0%, var(--off-white) 100%);
+    text-align: center;
+  }
+  
+  .container {
+    max-width: 600px;
+  }
+  
+  .widgetPage h1 {
+    color: var(--tm-blue);
+    font-size: var(--font-xxl);
+    margin-bottom: var(--space-lg);
+  }
+  
+  .widgetPage p {
+    color: var(--dark-gray);
+    font-size: var(--font-lg);
+    line-height: 1.6;
+  }
+  
