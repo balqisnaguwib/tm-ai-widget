@@ -130,6 +130,19 @@
     color: var(--medium-gray);
   }
   
+  /* Image styling */
+  .imageContainer {
+    margin: var(--space-sm) 0;
+    max-width: 100%;
+  }
+  
+  .responseImage {
+    max-width: 100%;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+    object-fit: contain;
+  }
+  
   .optionsContainer {
     display: flex;
     flex-direction: column;

@@ -2,7 +2,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sendChatMessage } from '../../utils/api';
+import { 
+  formatMessage, 
+  parseOptions, 
+  extractMessageFromResponse, 
+  hasValidMessage,
+  containsImageUrl,
+  extractImageUrl
+} from '../../utils/messageUtils';
 import styles from './Chat.module.css';
+
+// Enable or disable debug logs
+const DEBUG = process.env.NODE_ENV === 'development';
+
+/**
+ * Log function that only logs in development mode
+ */
+const debugLog = (...args) => {
+  if (DEBUG) {
+    console.log(...args);
+  }
+};
 
 const Chat = ({ tmId, onLogout }) => {
   const [messages, setMessages] = useState([]);
@@ -31,16 +51,24 @@ const Chat = ({ tmId, onLogout }) => {
         // Initial empty message to get the first question or welcome message
         const response = await sendChatMessage(tmId, '', answers);
         
-        if (response.competency_status === 'in progress') {
+        // Clear any existing messages first to avoid duplicates
+        setMessages([]);
+        
+        if (response && response.competency_status === 'in progress') {
           // We're in the survey flow
           setCompetencyStatus('in progress');
-          addBotMessage(response.message);
-        } else if (response.competency_status === 'complete') {
+          // Add a single message
+          if (response.message) {
+            addBotMessage(response.message);
+          }
+        } else if (response && response.competency_status === 'complete') {
           // User has already completed the survey
           setCompetencyStatus('complete');
-          setUserLevel(response.level);
-          setUserScore(response.score);
-          addBotMessage(response.message);
+          if (response.level) setUserLevel(response.level);
+          if (response.score) setUserScore(response.score);
+          if (hasValidMessage(response)) {
+            addBotMessage(extractMessageFromResponse(response));
+          }
         }
       } catch (error) {
         console.error('Error initializing chat:', error);
@@ -50,25 +78,50 @@ const Chat = ({ tmId, onLogout }) => {
       }
     };
     
-    initializeChat();
-  }, [tmId]);
+    // Only initialize on mount or when tmId changes, not when answers change
+    if (answers.length === 0) {
+      initializeChat();
+    }
+  }, [tmId]); // Remove answers dependency
   
   const addUserMessage = (text) => {
-    setMessages(prev => [...prev, { 
-      id: Date.now(), 
-      text, 
-      sender: 'user',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
+    try {
+      // Use the utility to ensure text is a string
+      const messageText = formatMessage(text);
+      
+      setMessages(prev => [...prev, { 
+        id: Date.now(), 
+        text: messageText, 
+        sender: 'user',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    } catch (error) {
+      console.error('Error adding user message:', error);
+    }
   };
   
   const addBotMessage = (text) => {
-    setMessages(prev => [...prev, { 
-      id: Date.now(), 
-      text, 
-      sender: 'bot',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
+    try {
+      // Use the utility to ensure text is a string
+      const messageText = formatMessage(text);
+      debugLog('Adding bot message:', messageText);
+      
+      setMessages(prev => [...prev, { 
+        id: Date.now(), 
+        text: messageText, 
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    } catch (error) {
+      console.error('Error adding bot message:', error);
+      // Add a fallback message to not break the UI
+      setMessages(prev => [...prev, { 
+        id: Date.now(), 
+        text: 'Error displaying message', 
+        sender: 'bot',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }]);
+    }
   };
   
   const handleSendMessage = async (e) => {
@@ -93,15 +146,39 @@ const Chat = ({ tmId, onLogout }) => {
       
       const response = await sendChatMessage(tmId, userText, updatedAnswers);
       
+      debugLog('API response processed:', response);
+      
       // Update state based on response
-      if (response.competency_status === 'complete' && competencyStatus === 'in progress') {
+      if (response && response.competency_status === 'complete' && competencyStatus === 'in progress') {
         // User just completed the survey
         setCompetencyStatus('complete');
-        setUserLevel(response.level);
-        setUserScore(response.score);
+        if (response.level) setUserLevel(response.level);
+        if (response.score) setUserScore(response.score);
+        
+        // When completing the competency test, only display the congratulations message
+        // which already contains the competency level and score
+        if (hasValidMessage(response)) {
+          const messageContent = extractMessageFromResponse(response);
+          addBotMessage(messageContent);
+        }
+      } else if (response && response.competency_status === 'in progress') {
+        setCompetencyStatus('in progress');
+        
+        // Add message from the response
+        if (hasValidMessage(response)) {
+          const messageContent = extractMessageFromResponse(response);
+          addBotMessage(messageContent);
+        }
+      } else {
+        // Normal conversation flow, not part of competency test
+        if (hasValidMessage(response)) {
+          const messageContent = extractMessageFromResponse(response);
+          addBotMessage(messageContent);
+        } else if (response) {
+          debugLog('No message found in response');
+          addBotMessage('Response received but no message found.');
+        }
       }
-      
-      addBotMessage(response.message);
     } catch (error) {
       console.error('Error sending message:', error);
       addBotMessage('Sorry, there was an error processing your message. Please try again.');
@@ -112,23 +189,27 @@ const Chat = ({ tmId, onLogout }) => {
   
   // Handle option selection for multiple choice questions
   const handleOptionSelect = (option) => {
-    // Extract the option letter (A, B, C, D)
-    const optionLetter = option.split('.')[0].trim().toLowerCase();
-    setInputValue(optionLetter);
-  };
-  
-  // Parse options from bot message if it's a multiple choice question
-  const parseOptions = (message) => {
-    const options = [];
-    const lines = message.split('\n');
-    
-    for (const line of lines) {
-      if (line.match(/^[A-D]\.\s/)) {
-        options.push(line.trim());
+    try {
+      // Check if option is valid
+      if (!option || typeof option !== 'string') {
+        console.error('Invalid option:', option);
+        return;
       }
+      
+      // Extract the option letter (A, B, C, D)
+      const optionLetter = option.split('.')[0].trim().toLowerCase();
+      setInputValue(optionLetter);
+      
+      // Auto-submit the form when an option is selected
+      setTimeout(() => {
+        const sendButton = document.querySelector(`.${styles.sendButton}`);
+        if (sendButton) {
+          sendButton.click();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error selecting option:', error);
     }
-    
-    return options;
   };
   
   return (
@@ -161,12 +242,23 @@ const Chat = ({ tmId, onLogout }) => {
       <div className={styles.messagesContainer}>
         <AnimatePresence>
           {messages.map((message) => {
-            const options = message.sender === 'bot' ? parseOptions(message.text) : [];
+            // Skip rendering invalid messages
+            if (!message || typeof message !== 'object') {
+              return null;
+            }
+            
+            let options = [];
+            try {
+              options = message.sender === 'bot' ? parseOptions(message.text) : [];
+            } catch (error) {
+              console.error('Error parsing options:', error);
+            }
+            
             const shouldShowOptions = competencyStatus === 'in progress' && options.length > 0;
             
             return (
               <motion.div
-                key={message.id}
+                key={message.id || Date.now() + Math.random()}
                 className={`${styles.messageWrapper} ${
                   message.sender === 'user' ? styles.userMessageWrapper : styles.botMessageWrapper
                 }`}
@@ -181,11 +273,86 @@ const Chat = ({ tmId, onLogout }) => {
                   }`}
                 >
                   <div className={styles.messageText}>
-                    {message.text.split('\n').map((line, i) => (
-                      <p key={i}>{line}</p>
-                    ))}
+                    {(() => {
+                      // Ensure text is a string and handle display accordingly
+                      const text = message.text || '';
+                      
+                      if (typeof text === 'string') {
+                        // Check if message contains an image URL
+                        if (message.sender === 'bot' && containsImageUrl(text)) {
+                          const imageUrl = extractImageUrl(text);
+                          
+                          // If no valid image URL found, render normal text
+                          if (!imageUrl) {
+                            return text.split('\n').map((line, i) => {
+                              if (message.sender === 'bot' && line.match(/^[A-D]\.\s/)) {
+                                return null;
+                              }
+                              return <p key={i}>{line}</p>;
+                            }).filter(Boolean);
+                          }
+                          
+                          // Create a display text without the image URL for cleaner presentation
+                          const displayText = text.replace(imageUrl, '').trim();
+                          
+                          return (
+                            <>
+                              {/* Display text content */}
+                              {displayText && displayText.split('\n').map((line, i) => {
+                                if (message.sender === 'bot' && line.match(/^[A-D]\.\s/)) {
+                                  return null;
+                                }
+                                return <p key={i}>{line}</p>;
+                              }).filter(Boolean)}
+                              
+                              {/* Display the image */}
+                              <div className={styles.imageContainer}>
+                                <img 
+                                  src={imageUrl} 
+                                  alt="Response image" 
+                                  className={styles.responseImage}
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    console.error('Image failed to load, trying alternative format:', imageUrl);
+                                    
+                                    // Extract ID from Google Drive URL and use direct format
+                                    if (imageUrl.includes('drive.usercontent.google.com')) {
+                                      const idMatch = imageUrl.match(/id=([\w-]+)/);
+                                      if (idMatch && idMatch[1]) {
+                                        const fileId = idMatch[1];
+                                        e.target.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                                      } else {
+                                        e.target.style.display = 'none';
+                                      }
+                                    } else {
+                                      e.target.style.display = 'none';
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </>
+                          );
+                        }
+                        
+                        // Regular text message (no image)
+                        return text.split('\n').map((line, i) => {
+                          // Skip rendering lines that start with A., B., C., or D. in the textbox
+                          if (message.sender === 'bot' && line.match(/^[A-D]\.\s/)) {
+                            return null;
+                          }
+                          return <p key={i}>{line}</p>;
+                        }).filter(Boolean);
+                      } else {
+                        // For non-string content (should be rare with our improved handling)
+                        return (
+                          <p className={styles.fallbackMessage}>
+                            {formatMessage(text)}
+                          </p>
+                        );
+                      }
+                    })()}
                   </div>
-                  <div className={styles.messageTime}>{message.time}</div>
+                  <div className={styles.messageTime}>{message.time || ''}</div>
                 </div>
                 
                 {shouldShowOptions && (
