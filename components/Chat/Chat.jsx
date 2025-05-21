@@ -8,7 +8,8 @@ import {
   extractMessageFromResponse, 
   hasValidMessage,
   containsImageUrl,
-  extractImageUrl
+  extractImageUrl,
+  extractGoogleDriveId
 } from '../../utils/messageUtils';
 import styles from './Chat.module.css';
 
@@ -211,6 +212,11 @@ const Chat = ({ tmId, onLogout }) => {
       console.error('Error selecting option:', error);
     }
   };
+
+  // Handle clicking on an image to open it in a new tab
+  const handleImageClick = (url) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
   
   return (
     <motion.div 
@@ -295,6 +301,10 @@ const Chat = ({ tmId, onLogout }) => {
                           // Create a display text without the image URL for cleaner presentation
                           const displayText = text.replace(imageUrl, '').trim();
                           
+                          // Extract Google Drive file ID if it's a Google Drive URL
+                          const fileId = extractGoogleDriveId(imageUrl);
+                          const isGoogleDriveUrl = !!fileId;
+                          
                           return (
                             <>
                               {/* Display text content */}
@@ -306,29 +316,36 @@ const Chat = ({ tmId, onLogout }) => {
                               }).filter(Boolean)}
                               
                               {/* Display the image */}
-                              <div className={styles.imageContainer}>
-                                <img 
-                                  src={imageUrl} 
-                                  alt="Response image" 
-                                  className={styles.responseImage}
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    console.error('Image failed to load, trying alternative format:', imageUrl);
-                                    
-                                    // Extract ID from Google Drive URL and use direct format
-                                    if (imageUrl.includes('drive.usercontent.google.com')) {
-                                      const idMatch = imageUrl.match(/id=([\w-]+)/);
-                                      if (idMatch && idMatch[1]) {
-                                        const fileId = idMatch[1];
-                                        e.target.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                                      } else {
-                                        e.target.style.display = 'none';
-                                      }
-                                    } else {
+                              <div 
+                                className={styles.imageContainer}
+                                onClick={() => handleImageClick(isGoogleDriveUrl 
+                                  ? `https://drive.google.com/file/d/${fileId}/view` 
+                                  : imageUrl)}
+                              >
+                                {isGoogleDriveUrl ? (
+                                  // For Google Drive: Use iframe with direct preview URL
+                                  <iframe
+                                    src={`https://drive.google.com/file/d/${fileId}/preview`}
+                                    title="Floor plan preview"
+                                    className={styles.drivePreview}
+                                    loading="lazy"
+                                    frameBorder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                  ></iframe>
+                                ) : (
+                                  // For regular images: Use img tag
+                                  <img 
+                                    src={imageUrl} 
+                                    alt="Response image" 
+                                    className={styles.responseImage}
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      console.error('Image failed to load:', imageUrl);
                                       e.target.style.display = 'none';
-                                    }
-                                  }}
-                                />
+                                    }}
+                                  />
+                                )}
                               </div>
                             </>
                           );

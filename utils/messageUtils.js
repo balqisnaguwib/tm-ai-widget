@@ -112,8 +112,8 @@ export const containsImageUrl = (text) => {
   // Check for common image extensions
   const imageExtensionRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|bmp|webp|svg)(\?.*)?(\s|$)/i;
   
-  // Check specifically for the TM AI Day floor plan URL format
-  const driveUrlRegex = /https?:\/\/drive\.usercontent\.google\.com\/download\?id=[\w-]+(?:&export=view)?(?:&authuser=\d+)?/i;
+  // Enhanced regex for Google Drive URLs - matches various formats including preview and download
+  const driveUrlRegex = /https?:\/\/(drive\.google\.com|drive\.usercontent\.google\.com)\/(file\/d\/|download\?id=|uc\?id=|thumbnail\?id=)[\w-]+/i;
   
   return imageExtensionRegex.test(text) || driveUrlRegex.test(text);
 };
@@ -130,9 +130,39 @@ export const extractImageUrl = (text) => {
   const imageMatch = text.match(/https?:\/\/\S+\.(jpg|jpeg|png|gif|bmp|webp|svg)(\?[^"'\s]*)?/i);
   if (imageMatch) return imageMatch[0];
   
-  // Try to match Google Drive download URLs with the specific format from the example
-  const driveMatch = text.match(/https?:\/\/drive\.usercontent\.google\.com\/download\?id=[\w-]+(?:&export=view)?(?:&authuser=\d+)?/i);
+  // Enhanced regex for Google Drive URLs with any combination of parameters
+  const driveMatch = text.match(/https?:\/\/(drive\.google\.com|drive\.usercontent\.google\.com)\/(file\/d\/|download\?id=|uc\?id=|thumbnail\?id=)[\w-]+(&[^=\s]+=[^&\s]+)*/i);
   if (driveMatch) return driveMatch[0];
+  
+  return null;
+};
+
+/**
+ * Extracts Google Drive file ID from a URL
+ * @param {string} url - URL potentially containing a Google Drive file ID
+ * @returns {string|null} - The extracted file ID or null if not found
+ */
+export const extractGoogleDriveId = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  
+  // Check various Google Drive URL formats
+  let match;
+  
+  // Format: https://drive.google.com/file/d/FILE_ID/...
+  match = url.match(/\/file\/d\/([\w-]+)/i);
+  if (match) return match[1];
+  
+  // Format: https://drive.usercontent.google.com/download?id=FILE_ID...
+  match = url.match(/[\?&]id=([\w-]+)/i);
+  if (match) return match[1];
+  
+  // Format: https://drive.google.com/uc?id=FILE_ID...
+  match = url.match(/\/uc\?id=([\w-]+)/i);
+  if (match) return match[1];
+  
+  // Format: https://drive.google.com/thumbnail?id=FILE_ID...
+  match = url.match(/\/thumbnail\?id=([\w-]+)/i);
+  if (match) return match[1];
   
   return null;
 };
