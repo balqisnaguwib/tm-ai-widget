@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST="{\"components/AIWidget/AIWidget.jsx -> ../Chat/Chat\":{\"id\":\"components/AIWidget/AIWidget.jsx -> ../Chat/Chat\",\"files\":[]},\"components/AIWidget/AIWidget.jsx -> ../Login/Login\":{\"id\":\"components/AIWidget/AIWidget.jsx -> ../Login/Login\",\"files\":[]}}"

@@ -9,6 +9,10 @@
   overflow: hidden;
 }
 
+.chatContainerMaximized {
+  background-color: var(--white);
+}
+
 .chatHeader {
   display: flex;
   align-items: center;
@@ -51,6 +55,29 @@
   opacity: 0.8;
 }
 
+.chatHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.maximizeButton {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: var(--transition-medium);
+}
+
+.maximizeButton:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
 .logoutButton {
   padding: var(--space-xs) var(--space-md);
   color: var(--white);
@@ -62,6 +89,50 @@
 
 .logoutButton:hover {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+.closeButton {
+  padding: var(--space-xs) var(--space-md);
+  color: var(--white);
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-sm);
+  transition: var(--transition-medium);
+}
+
+.closeButton:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive styles for header buttons */
+@media (max-width: 768px) {
+  .chatHeader {
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  .logo {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-sm);
+  }
+  
+  .headerInfo h3 {
+    font-size: var(--font-sm);
+  }
+  
+  .logoutButton, .closeButton {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-xs);
+  }
+  
+  .chatHeaderRight {
+    gap: var(--space-xs);
+  }
+  
+  .maximizeButton {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 .messagesContainer {
@@ -305,6 +376,20 @@
   
   .headerInfo h3 {
     font-size: var(--font-sm);
+  }
+  
+  .logoutButton, .closeButton {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-xs);
+  }
+  
+  .chatHeaderRight {
+    gap: var(--space-xs);
+  }
+  
+  .maximizeButton {
+    width: 30px;
+    height: 30px;
   }
   
   .imageContainer {

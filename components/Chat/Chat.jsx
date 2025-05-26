@@ -25,7 +25,7 @@ const debugLog = (...args) => {
   }
 };
 
-const Chat = ({ tmId, onLogout }) => {
+const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -67,8 +67,18 @@ const Chat = ({ tmId, onLogout }) => {
           setCompetencyStatus('complete');
           if (response.level) setUserLevel(response.level);
           if (response.score) setUserScore(response.score);
+          
           if (hasValidMessage(response)) {
-            addBotMessage(extractMessageFromResponse(response));
+            let messageContent = extractMessageFromResponse(response);
+            
+            // Check if the message contains the unwanted text about query parameters
+            if (messageContent.includes("Query parameter not provided")) {
+              // Replace with a better message
+              messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
+              
+Feel free to ask me any questions about AI or the TM AI Day event!`;
+            }
+            addBotMessage(messageContent);
           }
         }
       } catch (error) {
@@ -173,7 +183,15 @@ const Chat = ({ tmId, onLogout }) => {
       } else {
         // Normal conversation flow, not part of competency test
         if (hasValidMessage(response)) {
-          const messageContent = extractMessageFromResponse(response);
+          let messageContent = extractMessageFromResponse(response);
+          
+          // Also check for the unwanted message during normal conversation
+          if (response.competency_status === 'complete' && messageContent.includes("Query parameter not provided")) {
+            // Replace with a better message
+            messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
+            
+I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
+          }
           addBotMessage(messageContent);
         } else if (response) {
           debugLog('No message found in response');
@@ -220,7 +238,7 @@ const Chat = ({ tmId, onLogout }) => {
   
   return (
     <motion.div 
-      className={styles.chatContainer}
+      className={`${styles.chatContainer} ${isMaximized ? styles.chatContainerMaximized : ''}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -237,12 +255,43 @@ const Chat = ({ tmId, onLogout }) => {
             )}
           </div>
         </div>
-        <button 
-          className={styles.logoutButton} 
-          onClick={onLogout}
-        >
-          Logout
-        </button>
+        <div className={styles.chatHeaderRight}>
+          <button 
+            className={styles.maximizeButton}
+            onClick={onToggleMaximize}
+            title={isMaximized ? "Minimize" : "Maximize"}
+          >
+            <motion.div
+              animate={{ rotate: isMaximized ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {isMaximized ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-7.83 7.83 1.41 1.41L19 6.41V10h2V3h-7z" transform="rotate(180, 12, 12)"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M19 19H5V5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-7.83 7.83 1.41 1.41L19 6.41V10h2V3h-7z"></path>
+                </svg>
+              )}
+            </motion.div>
+          </button>
+          <button 
+            className={styles.logoutButton} 
+            onClick={onLogout}
+          >
+            Logout
+          </button>
+          {isMaximized && (
+            <button 
+              className={styles.closeButton} 
+              onClick={onClose}
+              title="Close"
+            >
+              Close
+            </button>
+          )}
+        </div>
       </div>
       
       <div className={styles.messagesContainer}>

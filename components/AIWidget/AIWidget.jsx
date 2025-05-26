@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Login from '../Login/Login';
 import Chat from '../Chat/Chat';
 import { getUserSession, clearUserSession } from '../../utils/api';
-import styles from './AIWidget.module.css';
+import styles from './AiWidget.module.css';
 
 const AIWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [tmId, setTmId] = useState('');
   const [step, setStep] = useState('login'); // login or chat
   
@@ -20,7 +21,78 @@ const AIWidget = () => {
     }
   }, []);
   
+  // Add preloading to prevent flickering
+  useEffect(() => {
+    // Pre-mount components to avoid flickering
+    const preloadComponents = async () => {
+      await Promise.all([
+        import('../Login/Login'),
+        import('../Chat/Chat')
+      ]);
+    };
+    
+    preloadComponents();
+  }, []);
+  
+  // Add ESC key listener for exiting maximized mode and manage body scroll
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isMaximized) {
+        setIsMaximized(false);
+      }
+    };
+    
+    // Prevent body scrolling when widget is maximized
+    if (isMaximized) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isMaximized]);
+  
+  // Add click outside handler to close widget
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Don't close if widget is not open or is maximized
+      if (!isOpen || isMaximized) return;
+      
+      // Get the widget container element
+      const widgetContainer = document.querySelector(`.${styles.widgetContainer}`);
+      const chatButton = document.querySelector(`.${styles.chatButton}`);
+      
+      // Check if the click was outside the widget and not on the chat button
+      if (
+        widgetContainer && 
+        !widgetContainer.contains(e.target) && 
+        chatButton && 
+        !chatButton.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    
+    // Add the event listener if the widget is open
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, isMaximized]);
+  
   const toggleWidget = () => {
+    // If we're closing the widget, reset to a consistent state
+    if (isOpen) {
+      setIsMaximized(false);
+    }
     setIsOpen(prevState => !prevState);
   };
   
@@ -35,6 +107,10 @@ const AIWidget = () => {
     setStep('login');
   };
   
+  const toggleMaximize = () => {
+    setIsMaximized(prev => !prev);
+  };
+  
   return (
     <>
       {/* Chat button */}
@@ -44,6 +120,7 @@ const AIWidget = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         title="Open AI Chat"
+        style={{ display: isMaximized ? 'none' : 'flex' }}
       >
         {isOpen ? (
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -57,25 +134,32 @@ const AIWidget = () => {
       </motion.button>
       
       {/* Widget container */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isOpen && (
           <motion.div
-            className={styles.widgetContainer}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={`${styles.widgetContainer} ${isMaximized ? styles.maximized : ''}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
             transition={{ 
-              duration: 0.3,
-              type: 'spring',
-              stiffness: 300,
-              damping: 25
+              duration: 0.2,
+              ease: "easeOut"
             }}
           >
             <div className={styles.widget}>
               {step === 'login' ? (
                 <Login onLogin={handleLogin} />
               ) : (
-                <Chat tmId={tmId} onLogout={handleLogout} />
+                <Chat 
+                  tmId={tmId} 
+                  onLogout={handleLogout} 
+                  onToggleMaximize={toggleMaximize} 
+                  isMaximized={isMaximized}
+                  onClose={() => {
+                    setIsMaximized(false);
+                    setIsOpen(false);
+                  }}
+                />
               )}
             </div>
           </motion.div>

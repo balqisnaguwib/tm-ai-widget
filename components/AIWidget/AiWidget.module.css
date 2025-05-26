@@ -23,16 +23,31 @@
   
   .widgetContainer {
     position: fixed;
-    bottom: calc(var(--space-xl) + 60px + var(--space-md)); /* Moved up to avoid button overlap */
+    bottom: calc(var(--space-xl) + 60px + var(--space-md));
     right: var(--space-xl);
     z-index: 999;
-    max-width: 50vw; /* 50% of viewport width */
-    width: calc(100% - var(--space-xl) * 2);
+    width: 400px; /* Fixed width instead of percentage */
+    height: 500px; /* Fixed height instead of percentage */
     box-shadow: var(--shadow-xl);
     border-radius: var(--border-radius-lg);
     overflow: hidden;
     background-color: var(--white);
-    height: 70vh; /* 70% of viewport height */
+    transition: all 0.2s ease-out;
+  }
+  
+  .maximized {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    z-index: 1000 !important;
   }
   
   .widget {
@@ -51,26 +66,35 @@
   }
   
   /* Responsive styles */
-  @media (max-width: 1200px) {
-    .widgetContainer {
-      max-width: 60vw;
-    }
-  }
-  
-  @media (max-width: 992px) {
-    .widgetContainer {
-      max-width: 70vw;
-    }
-  }
-  
   @media (max-width: 768px) {
     .widgetContainer {
-      bottom: calc(var(--space-md) + 50px + var(--space-sm)); /* Adjusted for mobile button size */
+      bottom: calc(var(--space-md) + 50px + var(--space-sm));
+      right: var(--space-md);
+      width: calc(100% - var(--space-md) * 2);
+      max-width: 400px;
+      height: 500px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .widgetContainer {
+      bottom: 0;
       right: 0;
       width: 100%;
-      max-width: 100%;
       height: 80vh;
       border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    }
+    
+    .maximized {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      border-radius: 0 !important;
     }
     
     .widget {
