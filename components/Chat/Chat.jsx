@@ -11,8 +11,6 @@ import {
   extractImageUrl,
   extractGoogleDriveId
 } from '../../utils/messageUtils';
-import RegistrationForm from '../RegistrationForm/RegistrationForm';
-import SpeakersGrid from '../SpeakersGrid/SpeakersGrid';
 import styles from './Chat.module.css';
 
 // Enable or disable debug logs
@@ -30,6 +28,294 @@ const debugLog = (...args) => {
 // Updated floor plan URL
 const FLOOR_PLAN_URL = 'https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg';
 
+// Standalone Registration Form Component
+const RegistrationFormStandalone = ({ onSubmit, onCancel }) => {
+  const [lob, setLob] = useState('');
+  const [objective, setObjective] = useState('');
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = () => {
+    // Validate form
+    const newErrors = {};
+    if (!lob.trim()) newErrors.lob = 'Line of Business is required';
+    if (!objective.trim()) newErrors.objective = 'Objective is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // Call the onSubmit function with form data
+    onSubmit({
+      lob: lob.trim(),
+      objective: objective.trim()
+    });
+  };
+
+  return (
+    <div style={{
+      backgroundColor: '#FFFFFF',
+      borderRadius: '0.5rem',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      overflow: 'hidden',
+      margin: '0.5rem 0',
+      width: '100%',
+      maxHeight: '400px', /* Limit height to ensure it doesn't push other content out of view */
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <div style={{
+        padding: '0.75rem 1rem',
+        background: 'linear-gradient(90deg, #003D7C 0%, #0080C8 100%)',
+        color: '#FFFFFF'
+      }}>
+        <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Registration Form</h3>
+      </div>
+      
+      <div style={{ 
+        padding: '1rem',
+        overflowY: 'auto',
+        flex: 1
+      }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '0.5rem',
+            fontWeight: 500,
+            color: '#003D7C',
+            fontSize: '0.875rem'
+          }}>
+            Line of Business (LOB)
+          </label>
+          <input
+            type="text"
+            value={lob}
+            onChange={(e) => setLob(e.target.value)}
+            placeholder="e.g., Digital, IT, Finance, HR"
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #E0E0E0',
+              borderRadius: '0.5rem',
+              fontSize: '1rem',
+              backgroundColor: '#F5F5F5'
+            }}
+          />
+          {errors.lob && (
+            <span style={{ color: '#d32f2f', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+              {errors.lob}
+            </span>
+          )}
+        </div>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '0.5rem',
+            fontWeight: 500,
+            color: '#003D7C',
+            fontSize: '0.875rem'
+          }}>
+            Objective for Attending
+          </label>
+          <textarea
+            value={objective}
+            onChange={(e) => setObjective(e.target.value)}
+            placeholder="What do you hope to gain from attending TM AI Day?"
+            rows={3}
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #E0E0E0',
+              borderRadius: '0.5rem',
+              fontSize: '1rem',
+              backgroundColor: '#F5F5F5',
+              minHeight: '80px',
+              resize: 'vertical'
+            }}
+          />
+          {errors.objective && (
+            <span style={{ color: '#d32f2f', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+              {errors.objective}
+            </span>
+          )}
+        </div>
+        
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '0.75rem',
+          marginTop: '1rem'
+        }}>
+          <button
+            onClick={onCancel}
+            disabled={isSubmitting}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: isSubmitting ? '#9E9E9E' : '#E0E0E0',
+              color: '#555555',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              border: 'none',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            style={{
+              padding: '0.5rem 1rem',
+              background: isSubmitting ? '#9E9E9E' : 'linear-gradient(90deg, #003D7C 0%, #0080C8 100%)',
+              color: '#FFFFFF',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              border: 'none',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isSubmitting ? 'Submitting...' : 'Register'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// SpeakersGrid Component
+const SpeakersGrid = ({ speakers }) => {
+  if (!speakers || !Array.isArray(speakers) || speakers.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      padding: '1rem',
+      backgroundColor: '#E5F0F9',
+      borderRadius: '0.5rem',
+      margin: '1rem 0'
+    }}>
+      <h3 style={{
+        fontSize: '1.25rem',
+        color: '#003D7C',
+        margin: '0 0 1rem 0',
+        textAlign: 'center'
+      }}>
+        TM AI Day Speakers
+      </h3>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+        gap: '1rem'
+      }}>
+        {speakers.map((speaker, index) => (
+          <div key={index} style={{
+            display: 'flex',
+            padding: '1rem',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '0.5rem',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+            margin: '0.5rem 0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              minWidth: '80px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              marginRight: '1rem',
+              backgroundColor: '#E5F0F9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {speaker.image_link ? (
+                <img 
+                  src={speaker.image_link} 
+                  alt={`${speaker.name}`} 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/150?text=Speaker';
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #FF6B00 0%, #FF9C59 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '2rem',
+                  fontWeight: 700
+                }}>
+                  {speaker.name.charAt(0)}
+                </div>
+              )}
+            </div>
+            
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <h3 style={{
+                fontSize: '1.25rem',
+                fontWeight: 600,
+                color: '#003D7C',
+                margin: '0 0 0.25rem 0'
+              }}>
+                {speaker.name}
+              </h3>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#555555',
+                margin: '0 0 1rem 0'
+              }}>
+                {speaker.title}
+              </p>
+              <div style={{ marginTop: 'auto' }}>
+                <h4 style={{
+                  fontSize: '0.75rem',
+                  color: '#9E9E9E',
+                  textTransform: 'uppercase',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Session:
+                </h4>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#CC5600',
+                  margin: 0,
+                  fontWeight: 500
+                }}>
+                  {speaker.session_title}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
@@ -42,6 +328,7 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [registrationIntent, setRegistrationIntent] = useState(false);
   const [speakers, setSpeakers] = useState(null);
+  const [errors, setErrors] = useState({});
   const messagesEndRef = useRef(null);
   
   // Scroll to bottom of messages
@@ -49,7 +336,18 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
+  // Apply specific styles to ensure scrollability
   useEffect(() => {
+    // Apply specific styles to ensure scrollability
+    const messagesContainer = document.querySelector(`.${styles.messagesContainer}`);
+    if (messagesContainer) {
+      messagesContainer.style.flex = '1';
+      messagesContainer.style.overflowY = 'auto';
+      messagesContainer.style.display = 'flex'; 
+      messagesContainer.style.flexDirection = 'column';
+      messagesContainer.style.position = 'relative';
+    }
+    
     scrollToBottom();
   }, [messages]);
   
@@ -100,7 +398,7 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
               // Replace with a better message
               messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
               
-Feel free to ask me any questions about AI or the TM AI Day event!`;
+Welcome to TM AI Day! Would you like to register for the event or find out more information about it?`;
             }
             
             addBotMessage(messageContent);
@@ -151,24 +449,13 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
       const normalizedText = messageText.toLowerCase();
       
       // Check if the message contains a trigger for the registration form
-      // This improved detection looks for either the explicit tag or a pattern that suggests 
-      // registration (asking for LOB and objectives)
-      if (normalizedText.includes('[display form]') || 
-          (normalizedText.includes('line of business') && 
-           normalizedText.includes('objective') && 
-           (normalizedText.includes('please provide') || 
-            normalizedText.includes('tell me') || 
-            normalizedText.includes('could you') || 
-            normalizedText.includes('can you')))) {
-            
+      // Enhanced detection for [display form] tag
+      if (normalizedText.includes('[display form]')) {
         debugLog('Registration form trigger detected!', messageText);
         setShowRegistrationForm(true);
         
-        // Remove the [display form] marker from the displayed message if it exists
-        let cleanMessage = messageText;
-        if (messageText.includes('[display form]')) {
-          cleanMessage = messageText.replace(/\[display form\]/gi, '').trim();
-        }
+        // Remove the [display form] marker from the displayed message
+        let cleanMessage = messageText.replace(/\[display form\]/gi, '').trim();
         
         setMessages(prev => [...prev, { 
           id: Date.now(), 
@@ -243,48 +530,6 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
     addUserMessage(userText);
     setIsLoading(true);
     
-    // Check if this is a direct request to register
-    const normalizedInput = userText.toLowerCase();
-    if (normalizedInput.includes('register') || 
-        normalizedInput.includes('sign up') || 
-        normalizedInput.includes('sign me up')) {
-      debugLog('Direct registration request detected');
-      setRegistrationIntent(true);
-      // For direct registration requests, we'll handle differently
-      try {
-        const response = await sendChatMessage(tmId, userText, [], chatHistory);
-        
-        // After getting response, show registration form
-        setShowRegistrationForm(true);
-        
-        // Add the bot's response
-        if (hasValidMessage(response)) {
-          let messageContent;
-          if (typeof response.message === 'object' && response.message.content) {
-            messageContent = response.message.content;
-          } else {
-            messageContent = extractMessageFromResponse(response);
-          }
-          
-          // Remove any [display form] marker
-          if (messageContent.includes('[display form]')) {
-            messageContent = messageContent.replace(/\[display form\]/gi, '').trim();
-          }
-          
-          addBotMessage(messageContent);
-          updateChatHistory('assistant', messageContent);
-        }
-      } catch (error) {
-        console.error('Error processing registration intent:', error);
-        const errorMessage = 'Sorry, there was a problem setting up registration. Please try again.';
-        addBotMessage(errorMessage);
-        updateChatHistory('assistant', errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-    
     try {
       // If in competency test, check if this is an answer to a question
       let updatedAnswers = [...answers];
@@ -350,30 +595,12 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
             messageContent = extractMessageFromResponse(response);
           }
           
-        // Also check for the unwanted message during normal conversation
+          // Also check for the unwanted message during normal conversation
           if (response.competency_status === 'complete' && messageContent.includes("Query parameter not provided")) {
             // Replace with a better message
             messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
             
 I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
-          }
-          
-          // Check if this is a registration prompt that might have missed the [display form] tag
-          if (typeof response.message === 'object' && 
-              response.message.content && 
-              response.message.role === 'assistant') {
-            
-            // Check for the exact message pattern from your example
-            if (response.message.content.includes("Great! To get started with your registration")) {
-              debugLog('Exact registration prompt pattern detected');
-              setShowRegistrationForm(true);
-            }
-            // Also check for a more general pattern
-            else if (response.message.content.toLowerCase().includes('line of business') && 
-                     response.message.content.toLowerCase().includes('objective')) {
-              debugLog('Registration prompt detected from message content analysis');
-              setShowRegistrationForm(true);
-            }
           }
           
           addBotMessage(messageContent);
@@ -426,7 +653,7 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
   };
   
   // Handle registration form submission
-  const handleRegistrationSubmit = async (formData) => {
+  const handleRegistrationSubmit = (formData) => {
     setShowRegistrationForm(false);
     setIsLoading(true);
     
@@ -438,32 +665,41 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
       // Send a message with the registration data
       const registrationMsg = `I want to register with the following information:\nLOB: ${formData.lob}\nObjective: ${formData.objective}`;
       
-      const response = await sendChatMessage(tmId, registrationMsg, [], chatHistory);
-      
-      // Display the response
-      if (hasValidMessage(response)) {
-        let messageContent;
-        
-        // Check if response.message is an object with role and content properties
-        if (typeof response.message === 'object' && response.message.content) {
-          messageContent = response.message.content;
-        } else {
-          messageContent = extractMessageFromResponse(response);
-        }
-        
-        addBotMessage(messageContent);
-        updateChatHistory('assistant', messageContent);
-      } else {
-        const successMessage = 'Thank you for registering for TM AI Day! Your information has been saved.';
-        addBotMessage(successMessage);
-        updateChatHistory('assistant', successMessage);
-      }
+      sendChatMessage(tmId, registrationMsg, [], chatHistory)
+        .then(response => {
+          // Display the response
+          if (hasValidMessage(response)) {
+            let messageContent;
+            
+            // Check if response.message is an object with role and content properties
+            if (typeof response.message === 'object' && response.message.content) {
+              messageContent = response.message.content;
+            } else {
+              messageContent = extractMessageFromResponse(response);
+            }
+            
+            addBotMessage(messageContent);
+            updateChatHistory('assistant', messageContent);
+          } else {
+            const successMessage = 'Thank you for registering for TM AI Day! Your information has been saved.';
+            addBotMessage(successMessage);
+            updateChatHistory('assistant', successMessage);
+          }
+          
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error('Error registering:', error);
+          const errorMessage = 'Sorry, there was an error processing your registration. Please try again.';
+          addBotMessage(errorMessage);
+          updateChatHistory('assistant', errorMessage);
+          setIsLoading(false);
+        });
     } catch (error) {
       console.error('Error registering:', error);
       const errorMessage = 'Sorry, there was an error processing your registration. Please try again.';
       addBotMessage(errorMessage);
       updateChatHistory('assistant', errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -703,11 +939,14 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
           </div>
         )}
         
+        {/* Add a dedicated scrollable container for the registration form */}
         {showRegistrationForm && (
-          <RegistrationForm 
-            onSubmit={handleRegistrationSubmit}
-            onCancel={handleRegistrationCancel}
-          />
+          <div style={{ overflowY: 'auto', maxHeight: '100%', width: '100%' }}>
+            <RegistrationFormStandalone 
+              onSubmit={handleRegistrationSubmit}
+              onCancel={handleRegistrationCancel}
+            />
+          </div>
         )}
         
         <div ref={messagesEndRef} />

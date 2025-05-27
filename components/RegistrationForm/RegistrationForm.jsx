@@ -1,7 +1,5 @@
-// components/RegistrationForm/RegistrationForm.jsx
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import styles from './RegistrationForm.module.css';
 
 const RegistrationForm = ({ onSubmit, onCancel }) => {
   const [lob, setLob] = useState('');
@@ -33,66 +31,148 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
     });
   };
 
+  // Styles moved inline to ensure they're applied
+  const styles = {
+    formContainer: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: '0.5rem',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      overflow: 'hidden',
+      margin: '1rem 0',
+      width: '100%'
+    },
+    formHeader: {
+      padding: '1rem 1.5rem',
+      background: 'linear-gradient(90deg, #003D7C 0%, #0080C8 100%)',
+      color: '#FFFFFF'
+    },
+    headerText: {
+      margin: 0,
+      fontSize: '1.25rem',
+      fontWeight: 600
+    },
+    form: {
+      padding: '1.5rem'
+    },
+    formGroup: {
+      marginBottom: '1.5rem'
+    },
+    label: {
+      display: 'block',
+      marginBottom: '0.5rem',
+      fontWeight: 500,
+      color: '#003D7C',
+      fontSize: '0.875rem'
+    },
+    input: {
+      width: '100%',
+      padding: '1rem',
+      border: '1px solid #E0E0E0',
+      borderRadius: '0.5rem',
+      fontSize: '1rem',
+      transition: '0.3s ease',
+      backgroundColor: '#F5F5F5'
+    },
+    textarea: {
+      resize: 'vertical',
+      minHeight: '100px'
+    },
+    errorText: {
+      color: '#d32f2f',
+      fontSize: '0.875rem',
+      display: 'block',
+      marginTop: '0.25rem'
+    },
+    formActions: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      gap: '1rem',
+      marginTop: '1.5rem'
+    },
+    cancelButton: {
+      padding: '0.5rem 1.5rem',
+      backgroundColor: '#E0E0E0',
+      color: '#555555',
+      borderRadius: '0.5rem',
+      fontSize: '1rem',
+      fontWeight: 600,
+      transition: '0.3s ease',
+      border: 'none',
+      cursor: 'pointer'
+    },
+    submitButton: {
+      padding: '0.5rem 1.5rem',
+      background: 'linear-gradient(90deg, #003D7C 0%, #0080C8 100%)',
+      color: '#FFFFFF',
+      borderRadius: '0.5rem',
+      fontSize: '1rem',
+      fontWeight: 600,
+      transition: '0.3s ease',
+      border: 'none',
+      cursor: 'pointer'
+    },
+    disabledButton: {
+      backgroundColor: '#9E9E9E',
+      cursor: 'not-allowed'
+    }
+  };
+
   return (
     <motion.div 
-      className={styles.formContainer}
+      style={styles.formContainer}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className={styles.formHeader}>
-        <h3>Registration Form</h3>
+      <div style={styles.formHeader}>
+        <h3 style={styles.headerText}>Registration Form</h3>
       </div>
       
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.formGroup}>
-          <label htmlFor="lob" className={styles.label}>Line of Business (LOB)</label>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.formGroup}>
+          <label htmlFor="lob" style={styles.label}>Line of Business (LOB)</label>
           <input
             type="text"
             id="lob"
             value={lob}
             onChange={(e) => setLob(e.target.value)}
-            className={styles.input}
+            style={styles.input}
             placeholder="e.g., Digital, IT, Finance, HR"
             disabled={isSubmitting}
           />
-          {errors.lob && <span className={styles.errorText}>{errors.lob}</span>}
+          {errors.lob && <span style={styles.errorText}>{errors.lob}</span>}
         </div>
         
-        <div className={styles.formGroup}>
-          <label htmlFor="objective" className={styles.label}>Objective for Attending</label>
+        <div style={styles.formGroup}>
+          <label htmlFor="objective" style={styles.label}>Objective for Attending</label>
           <textarea
             id="objective"
             value={objective}
             onChange={(e) => setObjective(e.target.value)}
-            className={`${styles.input} ${styles.textarea}`}
+            style={{...styles.input, ...styles.textarea}}
             placeholder="What do you hope to gain from attending TM AI Day?"
             rows="4"
             disabled={isSubmitting}
           />
-          {errors.objective && <span className={styles.errorText}>{errors.objective}</span>}
+          {errors.objective && <span style={styles.errorText}>{errors.objective}</span>}
         </div>
         
-        <div className={styles.formActions}>
-          <motion.button 
+        <div style={styles.formActions}>
+          <button 
             type="button"
-            className={styles.cancelButton}
+            style={isSubmitting ? {...styles.cancelButton, ...styles.disabledButton} : styles.cancelButton}
             onClick={onCancel}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
             disabled={isSubmitting}
           >
             Cancel
-          </motion.button>
-          <motion.button 
+          </button>
+          <button 
             type="submit"
-            className={styles.submitButton}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            style={isSubmitting ? {...styles.submitButton, ...styles.disabledButton} : styles.submitButton}
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Submitting...' : 'Register'}
-          </motion.button>
+          </button>
         </div>
       </form>
     </motion.div>
