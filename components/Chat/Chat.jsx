@@ -11,6 +11,8 @@ import {
   extractImageUrl,
   extractGoogleDriveId
 } from '../../utils/messageUtils';
+import RegistrationForm from '../RegistrationForm/RegistrationForm';
+import SpeakersGrid from '../SpeakersGrid/SpeakersGrid';
 import styles from './Chat.module.css';
 
 // Enable or disable debug logs
@@ -25,14 +27,21 @@ const debugLog = (...args) => {
   }
 };
 
+// Updated floor plan URL
+const FLOOR_PLAN_URL = 'https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg';
+
 const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
   const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [answers, setAnswers] = useState([]);
   const [userLevel, setUserLevel] = useState('');
   const [userScore, setUserScore] = useState('');
   const [competencyStatus, setCompetencyStatus] = useState('');
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [registrationIntent, setRegistrationIntent] = useState(false);
+  const [speakers, setSpeakers] = useState(null);
   const messagesEndRef = useRef(null);
   
   // Scroll to bottom of messages
@@ -54,13 +63,21 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
         
         // Clear any existing messages first to avoid duplicates
         setMessages([]);
+        setChatHistory([]);
         
         if (response && response.competency_status === 'in progress') {
           // We're in the survey flow
           setCompetencyStatus('in progress');
           // Add a single message
           if (response.message) {
-            addBotMessage(response.message);
+            // Check if response.message is an object with role and content properties
+            if (typeof response.message === 'object' && response.message.content) {
+              addBotMessage(response.message.content);
+              updateChatHistory('assistant', response.message.content);
+            } else {
+              addBotMessage(response.message);
+              updateChatHistory('assistant', response.message);
+            }
           }
         } else if (response && response.competency_status === 'complete') {
           // User has already completed the survey
@@ -69,7 +86,14 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
           if (response.score) setUserScore(response.score);
           
           if (hasValidMessage(response)) {
-            let messageContent = extractMessageFromResponse(response);
+            let messageContent;
+            
+            // Check if response.message is an object with role and content properties
+            if (typeof response.message === 'object' && response.message.content) {
+              messageContent = response.message.content;
+            } else {
+              messageContent = extractMessageFromResponse(response);
+            }
             
             // Check if the message contains the unwanted text about query parameters
             if (messageContent.includes("Query parameter not provided")) {
@@ -78,12 +102,16 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
               
 Feel free to ask me any questions about AI or the TM AI Day event!`;
             }
+            
             addBotMessage(messageContent);
+            updateChatHistory('assistant', messageContent);
           }
         }
       } catch (error) {
         console.error('Error initializing chat:', error);
-        addBotMessage('Sorry, there was an error connecting to the chat service. Please try again later.');
+        const errorMessage = 'Sorry, there was an error connecting to the chat service. Please try again later.';
+        addBotMessage(errorMessage);
+        updateChatHistory('assistant', errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -106,6 +134,8 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
         sender: 'user',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
+      
+      updateChatHistory('user', messageText);
     } catch (error) {
       console.error('Error adding user message:', error);
     }
@@ -117,12 +147,76 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
       const messageText = formatMessage(text);
       debugLog('Adding bot message:', messageText);
       
-      setMessages(prev => [...prev, { 
-        id: Date.now(), 
-        text: messageText, 
-        sender: 'bot',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
+      // Create a normalized version for easier pattern matching
+      const normalizedText = messageText.toLowerCase();
+      
+      // Check if the message contains a trigger for the registration form
+      // This improved detection looks for either the explicit tag or a pattern that suggests 
+      // registration (asking for LOB and objectives)
+      if (normalizedText.includes('[display form]') || 
+          (normalizedText.includes('line of business') && 
+           normalizedText.includes('objective') && 
+           (normalizedText.includes('please provide') || 
+            normalizedText.includes('tell me') || 
+            normalizedText.includes('could you') || 
+            normalizedText.includes('can you')))) {
+            
+        debugLog('Registration form trigger detected!', messageText);
+        setShowRegistrationForm(true);
+        
+        // Remove the [display form] marker from the displayed message if it exists
+        let cleanMessage = messageText;
+        if (messageText.includes('[display form]')) {
+          cleanMessage = messageText.replace(/\[display form\]/gi, '').trim();
+        }
+        
+        setMessages(prev => [...prev, { 
+          id: Date.now(), 
+          text: cleanMessage, 
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isRegistrationPrompt: true
+        }]);
+      } else {
+        // Check if the message contains JSON data for speakers
+        try {
+          // Look for JSON array pattern in the message
+          if (messageText.includes('"name"') && messageText.includes('"image_link"')) {
+            const jsonMatch = messageText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+              const jsonStr = jsonMatch[0];
+              const parsedSpeakers = JSON.parse(jsonStr);
+              
+              if (Array.isArray(parsedSpeakers) && parsedSpeakers.length > 0) {
+                setSpeakers(parsedSpeakers);
+                
+                // Replace the JSON in the message with a simple notification
+                const cleanMessage = messageText.replace(jsonStr, '').trim();
+                
+                setMessages(prev => [...prev, { 
+                  id: Date.now(), 
+                  text: cleanMessage || 'Here are the speakers for TM AI Day:', 
+                  sender: 'bot',
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  hasSpeakers: true
+                }]);
+                return;
+              }
+            }
+          }
+        } catch (jsonError) {
+          console.error('Error parsing JSON data from message:', jsonError);
+          // Continue with normal message handling if JSON parsing fails
+        }
+        
+        // Regular message
+        setMessages(prev => [...prev, { 
+          id: Date.now(), 
+          text: messageText, 
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
     } catch (error) {
       console.error('Error adding bot message:', error);
       // Add a fallback message to not break the UI
@@ -135,6 +229,10 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
     }
   };
   
+  const updateChatHistory = (role, content) => {
+    setChatHistory(prev => [...prev, { role, content }]);
+  };
+  
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -144,6 +242,48 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
     setInputValue('');
     addUserMessage(userText);
     setIsLoading(true);
+    
+    // Check if this is a direct request to register
+    const normalizedInput = userText.toLowerCase();
+    if (normalizedInput.includes('register') || 
+        normalizedInput.includes('sign up') || 
+        normalizedInput.includes('sign me up')) {
+      debugLog('Direct registration request detected');
+      setRegistrationIntent(true);
+      // For direct registration requests, we'll handle differently
+      try {
+        const response = await sendChatMessage(tmId, userText, [], chatHistory);
+        
+        // After getting response, show registration form
+        setShowRegistrationForm(true);
+        
+        // Add the bot's response
+        if (hasValidMessage(response)) {
+          let messageContent;
+          if (typeof response.message === 'object' && response.message.content) {
+            messageContent = response.message.content;
+          } else {
+            messageContent = extractMessageFromResponse(response);
+          }
+          
+          // Remove any [display form] marker
+          if (messageContent.includes('[display form]')) {
+            messageContent = messageContent.replace(/\[display form\]/gi, '').trim();
+          }
+          
+          addBotMessage(messageContent);
+          updateChatHistory('assistant', messageContent);
+        }
+      } catch (error) {
+        console.error('Error processing registration intent:', error);
+        const errorMessage = 'Sorry, there was a problem setting up registration. Please try again.';
+        addBotMessage(errorMessage);
+        updateChatHistory('assistant', errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     
     try {
       // If in competency test, check if this is an answer to a question
@@ -155,7 +295,7 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
         setAnswers(updatedAnswers);
       }
       
-      const response = await sendChatMessage(tmId, userText, updatedAnswers);
+      const response = await sendChatMessage(tmId, userText, updatedAnswers, chatHistory);
       
       debugLog('API response processed:', response);
       
@@ -169,38 +309,87 @@ Feel free to ask me any questions about AI or the TM AI Day event!`;
         // When completing the competency test, only display the congratulations message
         // which already contains the competency level and score
         if (hasValidMessage(response)) {
-          const messageContent = extractMessageFromResponse(response);
+          let messageContent;
+          
+          // Check if response.message is an object with role and content properties
+          if (typeof response.message === 'object' && response.message.content) {
+            messageContent = response.message.content;
+          } else {
+            messageContent = extractMessageFromResponse(response);
+          }
+          
           addBotMessage(messageContent);
+          updateChatHistory('assistant', messageContent);
         }
       } else if (response && response.competency_status === 'in progress') {
         setCompetencyStatus('in progress');
         
         // Add message from the response
         if (hasValidMessage(response)) {
-          const messageContent = extractMessageFromResponse(response);
+          let messageContent;
+          
+          // Check if response.message is an object with role and content properties
+          if (typeof response.message === 'object' && response.message.content) {
+            messageContent = response.message.content;
+          } else {
+            messageContent = extractMessageFromResponse(response);
+          }
+          
           addBotMessage(messageContent);
+          updateChatHistory('assistant', messageContent);
         }
       } else {
         // Normal conversation flow, not part of competency test
         if (hasValidMessage(response)) {
-          let messageContent = extractMessageFromResponse(response);
+          let messageContent;
           
-          // Also check for the unwanted message during normal conversation
+          // Check if response.message is an object with role and content properties
+          if (typeof response.message === 'object' && response.message.content) {
+            messageContent = response.message.content;
+          } else {
+            messageContent = extractMessageFromResponse(response);
+          }
+          
+        // Also check for the unwanted message during normal conversation
           if (response.competency_status === 'complete' && messageContent.includes("Query parameter not provided")) {
             // Replace with a better message
             messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
             
 I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
           }
+          
+          // Check if this is a registration prompt that might have missed the [display form] tag
+          if (typeof response.message === 'object' && 
+              response.message.content && 
+              response.message.role === 'assistant') {
+            
+            // Check for the exact message pattern from your example
+            if (response.message.content.includes("Great! To get started with your registration")) {
+              debugLog('Exact registration prompt pattern detected');
+              setShowRegistrationForm(true);
+            }
+            // Also check for a more general pattern
+            else if (response.message.content.toLowerCase().includes('line of business') && 
+                     response.message.content.toLowerCase().includes('objective')) {
+              debugLog('Registration prompt detected from message content analysis');
+              setShowRegistrationForm(true);
+            }
+          }
+          
           addBotMessage(messageContent);
+          updateChatHistory('assistant', messageContent);
         } else if (response) {
           debugLog('No message found in response');
-          addBotMessage('Response received but no message found.');
+          const fallbackMessage = 'Response received but no message found.';
+          addBotMessage(fallbackMessage);
+          updateChatHistory('assistant', fallbackMessage);
         }
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      addBotMessage('Sorry, there was an error processing your message. Please try again.');
+      const errorMessage = 'Sorry, there was an error processing your message. Please try again.';
+      addBotMessage(errorMessage);
+      updateChatHistory('assistant', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -234,6 +423,62 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
   // Handle clicking on an image to open it in a new tab
   const handleImageClick = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+  
+  // Handle registration form submission
+  const handleRegistrationSubmit = async (formData) => {
+    setShowRegistrationForm(false);
+    setIsLoading(true);
+    
+    // Add a summary of the submitted information as a user message
+    const userSummary = `Line of Business: ${formData.lob}\nObjective: ${formData.objective}`;
+    addUserMessage(userSummary);
+    
+    try {
+      // Send a message with the registration data
+      const registrationMsg = `I want to register with the following information:\nLOB: ${formData.lob}\nObjective: ${formData.objective}`;
+      
+      const response = await sendChatMessage(tmId, registrationMsg, [], chatHistory);
+      
+      // Display the response
+      if (hasValidMessage(response)) {
+        let messageContent;
+        
+        // Check if response.message is an object with role and content properties
+        if (typeof response.message === 'object' && response.message.content) {
+          messageContent = response.message.content;
+        } else {
+          messageContent = extractMessageFromResponse(response);
+        }
+        
+        addBotMessage(messageContent);
+        updateChatHistory('assistant', messageContent);
+      } else {
+        const successMessage = 'Thank you for registering for TM AI Day! Your information has been saved.';
+        addBotMessage(successMessage);
+        updateChatHistory('assistant', successMessage);
+      }
+    } catch (error) {
+      console.error('Error registering:', error);
+      const errorMessage = 'Sorry, there was an error processing your registration. Please try again.';
+      addBotMessage(errorMessage);
+      updateChatHistory('assistant', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleRegistrationCancel = () => {
+    setShowRegistrationForm(false);
+    
+    // Add a message that the user cancelled registration
+    const cancelMessage = 'I decided not to register right now.';
+    addUserMessage(cancelMessage);
+    
+    // Add a bot response
+    const botResponse = 'No problem! Feel free to ask me any questions about TM AI Day or register later if you change your mind.';
+    addBotMessage(botResponse);
+    updateChatHistory('assistant', botResponse);
   };
   
   return (
@@ -337,8 +582,13 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
                         if (message.sender === 'bot' && containsImageUrl(text)) {
                           const imageUrl = extractImageUrl(text);
                           
+                          // Update to the new floor plan URL if it's the old URL
+                          const displayUrl = imageUrl && imageUrl.includes('1VytyGMr9eE8Tmy4AM3-KV9xtvDJ3d99n') 
+                            ? FLOOR_PLAN_URL 
+                            : imageUrl;
+                          
                           // If no valid image URL found, render normal text
-                          if (!imageUrl) {
+                          if (!displayUrl) {
                             return text.split('\n').map((line, i) => {
                               if (message.sender === 'bot' && line.match(/^[A-D]\.\s/)) {
                                 return null;
@@ -348,10 +598,10 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
                           }
                           
                           // Create a display text without the image URL for cleaner presentation
-                          const displayText = text.replace(imageUrl, '').trim();
+                          const displayText = text.replace(imageUrl || '', '').trim();
                           
                           // Extract Google Drive file ID if it's a Google Drive URL
-                          const fileId = extractGoogleDriveId(imageUrl);
+                          const fileId = extractGoogleDriveId(displayUrl);
                           const isGoogleDriveUrl = !!fileId;
                           
                           return (
@@ -369,7 +619,7 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
                                 className={styles.imageContainer}
                                 onClick={() => handleImageClick(isGoogleDriveUrl 
                                   ? `https://drive.google.com/file/d/${fileId}/view` 
-                                  : imageUrl)}
+                                  : displayUrl)}
                               >
                                 {isGoogleDriveUrl ? (
                                   // For Google Drive: Use iframe with direct preview URL
@@ -385,12 +635,12 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
                                 ) : (
                                   // For regular images: Use img tag
                                   <img 
-                                    src={imageUrl} 
+                                    src={displayUrl} 
                                     alt="Response image" 
                                     className={styles.responseImage}
                                     loading="lazy"
                                     onError={(e) => {
-                                      console.error('Image failed to load:', imageUrl);
+                                      console.error('Image failed to load:', displayUrl);
                                       e.target.style.display = 'none';
                                     }}
                                   />
@@ -421,6 +671,10 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
                   <div className={styles.messageTime}>{message.time || ''}</div>
                 </div>
                 
+                {message.hasSpeakers && speakers && (
+                  <SpeakersGrid speakers={speakers} />
+                )}
+                
                 {shouldShowOptions && (
                   <div className={styles.optionsContainer}>
                     {options.map((option, index) => (
@@ -449,6 +703,13 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
           </div>
         )}
         
+        {showRegistrationForm && (
+          <RegistrationForm 
+            onSubmit={handleRegistrationSubmit}
+            onCancel={handleRegistrationCancel}
+          />
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
       
@@ -459,12 +720,12 @@ I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Type your message..."
           className={styles.input}
-          disabled={isLoading}
+          disabled={isLoading || showRegistrationForm}
         />
         <motion.button
           type="submit"
           className={styles.sendButton}
-          disabled={!inputValue.trim() || isLoading}
+          disabled={!inputValue.trim() || isLoading || showRegistrationForm}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >

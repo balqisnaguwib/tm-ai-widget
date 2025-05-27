@@ -28,12 +28,13 @@ const debugLog = (...args) => {
 };
 
 // Function to send a chat message
-export const sendChatMessage = async (tmId, message, answers = []) => {
+export const sendChatMessage = async (tmId, message, answers = [], chatHistory = []) => {
   try {
     const response = await apiClient.post('/chat', {
       tm_id: tmId,
       message,
-      answers
+      answers,
+      chat_history: chatHistory
     });
     
     // Debug log the response
@@ -41,6 +42,12 @@ export const sendChatMessage = async (tmId, message, answers = []) => {
     
     // Ensure message is consistently formatted
     if (response.data && response.data.message) {
+      // Check if message is already an object (from updated backend)
+      if (typeof response.data.message === 'object' && response.data.message.content) {
+        // It's already an object with role and content, use as is
+        return response.data;
+      }
+      
       // Format the message property but preserve the original object structure
       const originalMessage = response.data.message;
       response.data.message = formatMessage(originalMessage);
@@ -57,6 +64,28 @@ export const sendChatMessage = async (tmId, message, answers = []) => {
     return response.data;
   } catch (error) {
     console.error('Error sending chat message:', error);
+    throw error;
+  }
+};
+
+// Function to register a user for TM AI Day
+export const registerUser = async (tmId, lob, objective) => {
+  try {
+    // We'll use the same chat endpoint but with specific registration parameters
+    const response = await apiClient.post('/chat', {
+      tm_id: tmId,
+      message: "register",
+      lob,
+      objective,
+      // Include empty answers to maintain backward compatibility
+      answers: []
+    });
+    
+    debugLog('Registration Response:', response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error registering user:', error);
     throw error;
   }
 };

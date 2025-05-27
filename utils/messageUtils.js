@@ -19,8 +19,13 @@ export const formatMessage = (messageData) => {
     return messageData;
   }
   
-  // Handle object case
+  // Handle object case with updated structure for role/content
   if (typeof messageData === 'object') {
+    // Check for the new role/content structure first
+    if (messageData.role && messageData.content) {
+      return messageData.content;
+    }
+    
     // Try to extract text from common object structures
     if (messageData.text) {
       return messageData.text;
@@ -90,6 +95,11 @@ export const extractMessageFromResponse = (response) => {
     return '';
   }
   
+  // Handle the new format with role/content structure
+  if (response.message && typeof response.message === 'object' && response.message.content) {
+    return response.message.content;
+  }
+  
   if (response.message !== undefined) {
     return response.message;
   } else if (typeof response === 'string') {
@@ -113,7 +123,7 @@ export const containsImageUrl = (text) => {
   const imageExtensionRegex = /https?:\/\/\S+\.(jpg|jpeg|png|gif|bmp|webp|svg)(\?.*)?(\s|$)/i;
   
   // Enhanced regex for Google Drive URLs - matches various formats including preview and download
-  const driveUrlRegex = /https?:\/\/(drive\.google\.com|drive\.usercontent\.google\.com)\/(file\/d\/|download\?id=|uc\?id=|thumbnail\?id=)[\w-]+/i;
+  const driveUrlRegex = /https?:\/\/(drive\.google\.com|drive\.usercontent\.google\.com|ai\.tm\.com\.my)\/(file\/d\/|download\?id=|uc\?id=|thumbnail\?id=|AI-Day\/)[\w-]+/i;
   
   return imageExtensionRegex.test(text) || driveUrlRegex.test(text);
 };
@@ -133,6 +143,14 @@ export const extractImageUrl = (text) => {
   // Enhanced regex for Google Drive URLs with any combination of parameters
   const driveMatch = text.match(/https?:\/\/(drive\.google\.com|drive\.usercontent\.google\.com)\/(file\/d\/|download\?id=|uc\?id=|thumbnail\?id=)[\w-]+(&[^=\s]+=[^&\s]+)*/i);
   if (driveMatch) return driveMatch[0];
+  
+  // Specific match for TM AI Day floor plan
+  const tmAiDayMatch = text.match(/https?:\/\/ai\.tm\.com\.my\/AI-Day\/AI-DAY-floor-plan\.jpeg/i);
+  if (tmAiDayMatch) return tmAiDayMatch[0];
+  
+  // Match for speaker images
+  const speakerImageMatch = text.match(/https?:\/\/ai\.tm\.com\.my\/AI-Day\/speaker-[^"'\s]+\.png/i);
+  if (speakerImageMatch) return speakerImageMatch[0];
   
   return null;
 };
@@ -163,6 +181,28 @@ export const extractGoogleDriveId = (url) => {
   // Format: https://drive.google.com/thumbnail?id=FILE_ID...
   match = url.match(/\/thumbnail\?id=([\w-]+)/i);
   if (match) return match[1];
+  
+  return null;
+};
+
+/**
+ * Attempts to parse JSON from a string
+ * @param {string} text - Text potentially containing JSON
+ * @returns {object|null} - Parsed JSON object or null if parsing fails
+ */
+export const tryParseJSON = (text) => {
+  if (!text || typeof text !== 'string') return null;
+  
+  try {
+    // Look for JSON array or object pattern in the message
+    const jsonMatch = text.match(/(\[\s*\{[\s\S]*\}\s*\]|\{\s*"[\s\S]*"\s*:\s*[\s\S]*\})/);
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[0];
+      return JSON.parse(jsonStr);
+    }
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+  }
   
   return null;
 };

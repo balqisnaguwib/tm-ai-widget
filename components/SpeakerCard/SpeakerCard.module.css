@@ -1,0 +1,101 @@
+/* components/SpeakerCard/SpeakerCard.module.css */
+.speakerCard {
+    display: flex;
+    padding: var(--space-md);
+    background-color: var(--white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin: var(--space-sm) 0;
+    overflow: hidden;
+    transition: var(--transition-medium);
+  }
+  
+  .speakerCard:hover {
+    box-shadow: var(--shadow-md);
+  }
+  
+  .imageContainer {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: var(--space-md);
+    background-color: var(--tm-very-light-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .speakerImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .placeholderImage {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--tm-orange) 0%, var(--tm-light-orange) 100%);
+    color: var(--white);
+    font-size: var(--font-xxl);
+    font-weight: 700;
+  }
+  
+  .speakerInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .speakerName {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--tm-blue);
+    margin: 0 0 var(--space-xs) 0;
+  }
+  
+  .speakerTitle {
+    font-size: var(--font-sm);
+    color: var(--dark-gray);
+    margin: 0 0 var(--space-md) 0;
+  }
+  
+  .sessionInfo {
+    margin-top: auto;
+  }
+  
+  .sessionLabel {
+    font-size: var(--font-xs);
+    color: var(--medium-gray);
+    text-transform: uppercase;
+    margin: 0 0 var(--space-xs) 0;
+  }
+  
+  .sessionTitle {
+    font-size: var(--font-sm);
+    color: var(--tm-dark-orange);
+    margin: 0;
+    font-weight: 500;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .speakerCard {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: var(--space-sm);
+    }
+    
+    .imageContainer {
+      margin: 0 0 var(--space-md) 0;
+    }
+    
+    .speakerInfo {
+      width: 100%;
+    }
+  }
