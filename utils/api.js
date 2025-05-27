@@ -2,18 +2,9 @@
 import axios from 'axios';
 import { formatMessage } from './messageUtils';
 
-// Replace with your actual API endpoint
+// API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 const API_TOKEN = 'SDDFDSFn1232evje34fnc4SDASDSF5vuiqSDFabcj678ksbcjbnsjka89SDFDS898sdf';
-
-// Create an axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${API_TOKEN}`
-  }
-});
 
 // Enable or disable debug logs
 const DEBUG = process.env.NODE_ENV === 'development';
@@ -27,18 +18,108 @@ const debugLog = (...args) => {
   }
 };
 
-// Function to send a chat message
-export const sendChatMessage = async (tmId, message, answers = [], chatHistory = []) => {
+// Create an axios instance with enhanced config
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${API_TOKEN}`
+  },
+  timeout: 30000, // 30 second timeout
+  // Ensure withCredentials is false for cross-origin requests
+  withCredentials: false
+});
+
+// Add request interceptor for debugging
+apiClient.interceptors.request.use(config => {
+  debugLog(`API Request to: ${config.url}`, config);
+  return config;
+}, error => {
+  console.error('API Request Error:', error);
+  return Promise.reject(error);
+});
+
+// Add response interceptor for debugging
+apiClient.interceptors.response.use(response => {
+  debugLog('API Response:', response.data);
+  return response;
+}, error => {
+  console.error('API Response Error:', error);
+  // Network errors won't have a response
+  if (!error.response && error.code === 'ECONNABORTED') {
+    console.error('Request timeout. Server might be overloaded or unreachable.');
+  } else if (!error.response) {
+    console.error('Network error. Check if the API server is running and accessible.');
+  }
+  return Promise.reject(error);
+});
+
+/**
+ * Retry a failed request with exponential backoff
+ * @param {Function} apiFn - The API function to retry
+ * @param {Array} args - Arguments to pass to the API function
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {number} delay - Initial delay in milliseconds
+ * @returns {Promise} - Promise that resolves with the API response
+ */
+const retryRequest = async (apiFn, args, maxRetries = 3, delay = 1000) => {
   try {
-    const response = await apiClient.post('/chat', {
-      tm_id: tmId,
-      message,
-      answers,
-      chat_history: chatHistory
-    });
+    return await apiFn(...args);
+  } catch (error) {
+    // Only retry network errors, not HTTP errors (4xx, 5xx)
+    if (maxRetries > 0 && (!error.response || error.code === 'ECONNABORTED')) {
+      debugLog(`Retrying request... (${maxRetries} attempts left)`);
+      
+      // Wait with exponential backoff
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Retry with increased delay
+      return retryRequest(apiFn, args, maxRetries - 1, delay * 2);
+    }
+    
+    throw error;
+  }
+};
+
+// Function to check API health/status
+export const checkApiStatus = async () => {
+  try {
+    // Most APIs have a health check endpoint like /health or /status
+    // Adjust this to match your API's health endpoint
+    const response = await apiClient.get('/health', { timeout: 5000 });
+    return response.status === 200;
+  } catch (error) {
+    console.error('API Health Check Failed:', error);
+    return false;
+  }
+};
+
+// Function to send a chat message with retry logic
+export const sendChatMessage = async (tmId, message, answers = [], chatHistory = []) => {
+  debugLog('Sending chat message:', { tmId, message, answers });
+  
+  // First check if we can reach the server (optional)
+  // const isApiAvailable = await checkApiStatus();
+  // if (!isApiAvailable) {
+  //   throw new Error('API server is unavailable. Please try again later.');
+  // }
+  
+  try {
+    // Make the API request with retry logic
+    const makeRequest = async () => {
+      return await apiClient.post('/chat', {
+        tm_id: tmId,
+        message,
+        answers,
+        chat_history: chatHistory
+      });
+    };
+    
+    // Use retry logic for the request
+    const response = await retryRequest(makeRequest, [], 2);
     
     // Debug log the response
-    debugLog('API Response:', response.data);
+    debugLog('API Response processed:', response.data);
     
     // Ensure message is consistently formatted
     if (response.data && response.data.message) {
@@ -64,6 +145,17 @@ export const sendChatMessage = async (tmId, message, answers = [], chatHistory =
     return response.data;
   } catch (error) {
     console.error('Error sending chat message:', error);
+    
+    // Provide a more helpful error message
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('The request timed out. The server might be overloaded.');
+    } else if (!error.response) {
+      throw new Error('Could not connect to the API server. Please check your network connection or the server status.');
+    } else if (error.response) {
+      // Return error from server if available
+      throw new Error(`Server error: ${error.response.status} ${error.response.statusText}`);
+    }
+    
     throw error;
   }
 };

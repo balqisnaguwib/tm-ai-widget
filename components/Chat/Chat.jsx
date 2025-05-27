@@ -28,6 +28,180 @@ const debugLog = (...args) => {
 // Updated floor plan URL
 const FLOOR_PLAN_URL = 'https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg';
 
+// Enhanced Markdown Parser Function
+const parseMarkdown = (text) => {
+  if (!text || typeof text !== 'string') return [];
+  
+  const lines = text.split('\n');
+  const elements = [];
+  let currentList = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Skip empty lines but add spacing
+    if (line.trim() === '') {
+      // Close any open list
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({ type: 'br', key: `br-${i}` });
+      continue;
+    }
+    
+    // Headers
+    if (line.startsWith('### ')) {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'h3',
+        content: parseInlineMarkdown(line.substring(4)),
+        key: `h3-${i}`
+      });
+    } else if (line.startsWith('## ')) {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'h2',
+        content: parseInlineMarkdown(line.substring(3)),
+        key: `h2-${i}`
+      });
+    } else if (line.startsWith('# ')) {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'h1',
+        content: parseInlineMarkdown(line.substring(2)),
+        key: `h1-${i}`
+      });
+    }
+    // List items
+    else if (line.match(/^[\*\-\+]\s+/) || line.match(/^\d+\.\s+/)) {
+      const isOrdered = line.match(/^\d+\.\s+/);
+      const content = line.replace(/^[\*\-\+\d]+\.?\s+/, '');
+      
+      if (!currentList || currentList.ordered !== isOrdered) {
+        if (currentList) {
+          elements.push(currentList);
+        }
+        currentList = {
+          type: 'list',
+          ordered: isOrdered,
+          items: [],
+          key: `list-${i}`
+        };
+      }
+      
+      currentList.items.push({
+        content: parseInlineMarkdown(content),
+        key: `li-${i}`
+      });
+    }
+    // Regular paragraph
+    else {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'p',
+        content: parseInlineMarkdown(line),
+        key: `p-${i}`
+      });
+    }
+  }
+  
+  // Close any remaining list
+  if (currentList) {
+    elements.push(currentList);
+  }
+  
+  return elements;
+};
+
+// Parse inline markdown (bold, italic, etc.)
+const parseInlineMarkdown = (text) => {
+  if (!text) return '';
+  
+  // Handle bold text (**text** or __text__)
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+  
+  // Handle italic text (*text* or _text_)
+  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+  
+  return text;
+};
+
+// Component to render parsed markdown
+const MarkdownRenderer = ({ elements }) => {
+  return (
+    <>
+      {elements.map((element) => {
+        switch (element.type) {
+          case 'h1':
+            return (
+              <h1 
+                key={element.key} 
+                className={styles.markdownH1}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'h2':
+            return (
+              <h2 
+                key={element.key} 
+                className={styles.markdownH2}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'h3':
+            return (
+              <h3 
+                key={element.key} 
+                className={styles.markdownH3}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'list':
+            const ListTag = element.ordered ? 'ol' : 'ul';
+            return (
+              <ListTag key={element.key} className={styles.markdownList}>
+                {element.items.map((item) => (
+                  <li 
+                    key={item.key} 
+                    className={styles.markdownListItem}
+                    dangerouslySetInnerHTML={{ __html: item.content }}
+                  />
+                ))}
+              </ListTag>
+            );
+          case 'p':
+            return (
+              <p 
+                key={element.key} 
+                className={styles.markdownP}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'br':
+            return <br key={element.key} />;
+          default:
+            return null;
+        }
+      })}
+    </>
+  );
+};
+
 // Standalone Registration Form Component
 const RegistrationFormStandalone = ({ onSubmit, onCancel }) => {
   const [lob, setLob] = useState('');
@@ -63,7 +237,7 @@ const RegistrationFormStandalone = ({ onSubmit, onCancel }) => {
       overflow: 'hidden',
       margin: '0.5rem 0',
       width: '100%',
-      maxHeight: '400px', /* Limit height to ensure it doesn't push other content out of view */
+      maxHeight: '400px',
       display: 'flex',
       flexDirection: 'column'
     }}>
@@ -501,7 +675,8 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
           id: Date.now(), 
           text: messageText, 
           sender: 'bot',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          hasMarkdown: messageText.includes('###') || messageText.includes('**') || messageText.includes('*')
         }]);
       }
     } catch (error) {
@@ -884,7 +1059,13 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
                           );
                         }
                         
-                        // Regular text message (no image)
+                        // Check if this message has markdown formatting
+                        if (message.hasMarkdown && message.sender === 'bot') {
+                          const markdownElements = parseMarkdown(text);
+                          return <MarkdownRenderer elements={markdownElements} />;
+                        }
+                        
+                        // Regular text message (no image, no markdown)
                         return text.split('\n').map((line, i) => {
                           // Skip rendering lines that start with A., B., C., or D. in the textbox
                           if (message.sender === 'bot' && line.match(/^[A-D]\.\s/)) {
