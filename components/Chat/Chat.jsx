@@ -1,5 +1,5 @@
 // components/Chat/Chat.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sendChatMessage } from '../../utils/api';
 import { 
@@ -28,6 +28,33 @@ const debugLog = (...args) => {
 
 // Updated floor plan URL
 const FLOOR_PLAN_URL = 'https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg';
+
+/**
+ * Improved function to detect registration intent in user messages
+ * @param {string} message - The user's message
+ * @returns {boolean} - Whether the message indicates registration intent
+ */
+const detectRegistrationIntent = (message) => {
+  if (!message || typeof message !== 'string') return false;
+  
+  // Expanded list with more variations, including the exact "I want to register" 
+  // which appears in the screenshot
+  const registrationKeywords = [
+    "register", "registration", "sign up", "signup", "sign me up", 
+    "join event", "attend", "registration form", 
+    "want to register", "wanted to register", "like to register", "would like to register",
+    "i want to register", "yes i want to register", "yes, i want to register", 
+    "i'd like to register", "i would like to register", "i wanna register"
+  ];
+  
+  const messageLower = message.toLowerCase().trim();
+  
+  // Check for exact matches first (highest confidence)
+  if (messageLower === "i want to register") return true;
+  
+  // Then check for keyword inclusion
+  return registrationKeywords.some(keyword => messageLower.includes(keyword));
+};
 
 // Enhanced Markdown Parser Function
 const parseMarkdown = (text) => {
@@ -602,6 +629,32 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
   const [errors, setErrors] = useState({});
   const messagesEndRef = useRef(null);
   
+  // NEW: Registration conversation monitoring
+  const monitorRegistrationFlow = useCallback(() => {
+    // Find the most recent user and bot messages
+    const userMessages = messages.filter(m => m.sender === 'user');
+    const botMessages = messages.filter(m => m.sender === 'bot');
+    
+    if (userMessages.length > 0 && botMessages.length > 0) {
+      const lastUserMsg = userMessages[userMessages.length - 1].text.toLowerCase();
+      const lastBotMsg = botMessages[botMessages.length - 1].text.toLowerCase();
+      
+      // Check exact scenario from screenshot: User says "I want to register" and bot asks for LOB/objectives
+      if (lastUserMsg.includes('want to register') && 
+          lastBotMsg.includes('line of business') && 
+          lastBotMsg.includes('objectives') && 
+          !showRegistrationForm) {
+        setShowRegistrationForm(true);
+        debugLog('Registration flow detected and form triggered!');
+      }
+    }
+  }, [messages, showRegistrationForm]);
+  
+  // NEW: Add effect to monitor registration flow
+  useEffect(() => {
+    monitorRegistrationFlow();
+  }, [monitorRegistrationFlow]);
+  
   // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -621,6 +674,29 @@ const Chat = ({ tmId, onLogout, onToggleMaximize, isMaximized, onClose }) => {
     
     scrollToBottom();
   }, [messages]);
+  
+  // NEW: Add this effect to check for the specific post-survey registration scenario
+  useEffect(() => {
+    // This is specifically for catching the post-survey registration case
+    if (messages.length >= 1) {
+      // Check for the scenario where user has completed survey and said "I want to register"
+      const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.sender === 'user');
+      const lastBotMessageIndex = [...messages].reverse().findIndex(m => m.sender === 'bot');
+      
+      if (lastUserMessageIndex !== -1 && lastBotMessageIndex !== -1) {
+        const lastUserMsg = messages[messages.length - 1 - lastUserMessageIndex];
+        const lastBotMsg = messages[messages.length - 1 - lastBotMessageIndex];
+        
+        // Check if user said "I want to register" and bot is asking for registration info
+        if (lastUserMsg.text.toLowerCase().includes('want to register') && 
+            lastBotMsg.text.toLowerCase().includes('line of business') && 
+            !showRegistrationForm) {
+          debugLog('Post-survey registration intent detected via monitoring');
+          setShowRegistrationForm(true);
+        }
+      }
+    }
+  }, [messages, showRegistrationForm]);
   
   // Initial message when chat opens
   useEffect(() => {
@@ -719,8 +795,24 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
       // Create a normalized version for easier pattern matching
       const normalizedText = messageText.toLowerCase();
       
-      // Check if the message contains a trigger for the registration form
-      if (normalizedText.includes('[display form]')) {
+      // IMPROVED DETECTION: Check if the message contains a trigger for the registration form
+      // or if it appears to be asking for registration information
+      const isRegistrationPrompt = 
+        normalizedText.includes('[display form]') || 
+        (
+          // Check for standard registration prompt patterns
+          (normalizedText.includes('line of business') || normalizedText.includes('lob')) && 
+          normalizedText.includes('objectives') && 
+          (
+            normalizedText.includes('attending') || 
+            normalizedText.includes('registration') || 
+            normalizedText.includes('ai day')
+          )
+        ) ||
+        // Also look for the specific pattern in the message shown in the screenshot
+        (normalizedText.includes('get started with your registration') && normalizedText.includes('(lob)'));
+      
+      if (isRegistrationPrompt) {
         debugLog('Registration form trigger detected!', messageText);
         setShowRegistrationForm(true);
         
@@ -809,6 +901,27 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
     const userText = inputValue.trim();
     setInputValue('');
     addUserMessage(userText);
+    
+    // IMPROVED POST-SURVEY DETECTION:
+    // Check if this is a registration intent
+    const isRegistrationIntent = detectRegistrationIntent(userText);
+    
+    // Check if we're in the post-survey state by looking at recent messages
+    const isPostSurveyState = messages.some(message => 
+      message.sender === 'bot' && 
+      (message.text.includes('Congratulations on completing the AI survey') ||
+       message.text.includes('welcome to Telekom Malaysia AI Day'))
+    );
+    
+    // Show registration form if:
+    // 1. User explicitly mentions registration after completing the survey, OR
+    // 2. User is in a state where we just asked them if they want to register
+    if ((isRegistrationIntent && competencyStatus === 'complete') || 
+        (isRegistrationIntent && isPostSurveyState)) {
+      debugLog('Post-survey registration intent detected!', userText);
+      setShowRegistrationForm(true);
+    }
+    
     setIsLoading(true);
     
     try {

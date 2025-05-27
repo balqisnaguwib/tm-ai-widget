@@ -6,11 +6,38 @@ import Chat from '../Chat/Chat';
 import { getUserSession, clearUserSession } from '../../utils/api';
 import styles from './AiWidget.module.css';
 
+/**
+ * Improved function to detect registration intent in user messages
+ * This can be used for monitoring chat state at the widget level
+ * @param {string} message - The user's message
+ * @returns {boolean} - Whether the message indicates registration intent
+ */
+const detectRegistrationIntent = (message) => {
+  if (!message || typeof message !== 'string') return false;
+  
+  // Expanded list of registration keywords
+  const registrationKeywords = [
+    "register", "registration", "sign up", "signup", "sign me up", 
+    "join event", "attend", "registration form", "want to register",
+    "wanted to register", "like to register", "would like to register",
+    "i want to register", "yes, i want to register", "yes i want to register",
+    "i'd like to register", "i would like to register", "i wanna register"
+  ];
+  
+  // Convert message to lowercase for case-insensitive matching
+  const messageLower = message.toLowerCase();
+  
+  // Check if any registration keyword is in the message
+  return registrationKeywords.some(keyword => messageLower.includes(keyword));
+};
+
 const AIWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [tmId, setTmId] = useState('');
   const [step, setStep] = useState('login'); // login or chat
+  // Add this state to manage registration form visibility at the widget level if needed
+  const [globalRegistrationIntent, setGlobalRegistrationIntent] = useState(false);
   
   // Check for existing session
   useEffect(() => {
@@ -110,6 +137,15 @@ const AIWidget = () => {
   const toggleMaximize = () => {
     setIsMaximized(prev => !prev);
   };
+
+  // Optional: function to handle message monitoring at the widget level
+  // This can be used if you want to add additional logic or state tracking
+  const handleMessageMonitoring = (message) => {
+    // Check for registration intent
+    if (detectRegistrationIntent(message)) {
+      setGlobalRegistrationIntent(true);
+    }
+  };
   
   return (
     <>
@@ -159,6 +195,8 @@ const AIWidget = () => {
                     setIsMaximized(false);
                     setIsOpen(false);
                   }}
+                  // You can optionally add any other props needed for coordinating state
+                  // onMessageChange={handleMessageMonitoring} // Optional message monitoring
                 />
               )}
             </div>
