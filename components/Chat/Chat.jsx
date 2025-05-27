@@ -598,9 +598,7 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
           // Also check for the unwanted message during normal conversation
           if (response.competency_status === 'complete' && messageContent.includes("Query parameter not provided")) {
             // Replace with a better message
-            messageContent = `You have already completed the AI competency survey! Your level is ${response.level || 'determined'} ${response.score ? `with a score of ${response.score}` : ''}.
-            
-I'd be happy to answer any questions you have about AI or the TM AI Day event!`;
+            messageContent = `Congratulations on completing the AI survey, and welcome to Telekom Malaysia AI Day! As an ${response.level}, you're taking great first steps into the world of artificial intelligence. Would you like to register for the event or find out more information about it?`;
           }
           
           addBotMessage(messageContent);
