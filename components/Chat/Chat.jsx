@@ -9,7 +9,8 @@ import {
   hasValidMessage,
   containsImageUrl,
   extractImageUrl,
-  extractGoogleDriveId
+  extractGoogleDriveId,
+  tryParseJSON
 } from '../../utils/messageUtils';
 import styles from './Chat.module.css';
 
@@ -35,6 +36,13 @@ const parseMarkdown = (text) => {
   const lines = text.split('\n');
   const elements = [];
   let currentList = null;
+  let inRegistrationResponse = false;
+  
+  // Check if this appears to be a registration response
+  if (text.includes("successfully registering for TM AI Day") || 
+      text.includes("TM AI Day Events & Agenda")) {
+    inRegistrationResponse = true;
+  }
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -50,8 +58,31 @@ const parseMarkdown = (text) => {
       continue;
     }
     
+    // Special handling for registration response dividers (---)
+    if (inRegistrationResponse && line.trim().startsWith('---')) {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'divider',
+        key: `divider-${i}`
+      });
+      continue;
+    }
+    
     // Headers
-    if (line.startsWith('### ')) {
+    if (line.startsWith('#### ')) {
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+      }
+      elements.push({
+        type: 'h4',
+        content: parseInlineMarkdown(line.substring(5)),
+        key: `h4-${i}`
+      });
+    } else if (line.startsWith('### ')) {
       if (currentList) {
         elements.push(currentList);
         currentList = null;
@@ -81,11 +112,20 @@ const parseMarkdown = (text) => {
         content: parseInlineMarkdown(line.substring(2)),
         key: `h1-${i}`
       });
-    }
-    // List items
-    else if (line.match(/^[\*\-\+]\s+/) || line.match(/^\d+\.\s+/)) {
+    } 
+    // List items - enhanced to better detect lists in registration responses
+    else if (line.match(/^[\*\-\+]\s+/) || line.match(/^\d+\.\s+/) || line.match(/^\s*\*\s+Time:/) || line.match(/^\s*\*\s+Description:/)) {
       const isOrdered = line.match(/^\d+\.\s+/);
-      const content = line.replace(/^[\*\-\+\d]+\.?\s+/, '');
+      let content = line;
+      
+      // Clean up bullet format
+      if (line.match(/^[\*\-\+]\s+/)) {
+        content = line.replace(/^[\*\-\+]\s+/, '');
+      } else if (line.match(/^\d+\.\s+/)) {
+        content = line.replace(/^\d+\.\s+/, '');
+      } else if (line.match(/^\s*\*\s+/)) {
+        content = line.replace(/^\s*\*\s+/, '');
+      }
       
       if (!currentList || currentList.ordered !== isOrdered) {
         if (currentList) {
@@ -99,10 +139,25 @@ const parseMarkdown = (text) => {
         };
       }
       
-      currentList.items.push({
-        content: parseInlineMarkdown(content),
-        key: `li-${i}`
-      });
+      // Special formatting for Time and Description fields in agenda items
+      if (content.startsWith('Time:')) {
+        currentList.items.push({
+          content: `<span class="agenda-time">${parseInlineMarkdown(content)}</span>`,
+          key: `li-${i}`,
+          isAgendaItem: true
+        });
+      } else if (content.startsWith('Description:')) {
+        currentList.items.push({
+          content: `<span class="agenda-desc">${parseInlineMarkdown(content)}</span>`,
+          key: `li-${i}`,
+          isAgendaItem: true
+        });
+      } else {
+        currentList.items.push({
+          content: parseInlineMarkdown(content),
+          key: `li-${i}`
+        });
+      }
     }
     // Regular paragraph
     else {
@@ -110,11 +165,27 @@ const parseMarkdown = (text) => {
         elements.push(currentList);
         currentList = null;
       }
-      elements.push({
-        type: 'p',
-        content: parseInlineMarkdown(line),
-        key: `p-${i}`
-      });
+      
+      // Special case for agenda headers in registration responses
+      if (inRegistrationResponse && line.trim().startsWith('Time:')) {
+        elements.push({
+          type: 'agendaTime',
+          content: parseInlineMarkdown(line),
+          key: `time-${i}`
+        });
+      } else if (inRegistrationResponse && line.trim().startsWith('Description:')) {
+        elements.push({
+          type: 'agendaDesc',
+          content: parseInlineMarkdown(line),
+          key: `desc-${i}`
+        });
+      } else {
+        elements.push({
+          type: 'p',
+          content: parseInlineMarkdown(line),
+          key: `p-${i}`
+        });
+      }
     }
   }
   
@@ -171,6 +242,32 @@ const MarkdownRenderer = ({ elements }) => {
                 dangerouslySetInnerHTML={{ __html: element.content }}
               />
             );
+          case 'h4':
+            return (
+              <h4 
+                key={element.key} 
+                className={styles.markdownH4}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'divider':
+            return <hr key={element.key} className={styles.markdownDivider} />;
+          case 'agendaTime':
+            return (
+              <div 
+                key={element.key} 
+                className={styles.agendaTime}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
+          case 'agendaDesc':
+            return (
+              <div 
+                key={element.key} 
+                className={styles.agendaDesc}
+                dangerouslySetInnerHTML={{ __html: element.content }}
+              />
+            );
           case 'list':
             const ListTag = element.ordered ? 'ol' : 'ul';
             return (
@@ -178,7 +275,7 @@ const MarkdownRenderer = ({ elements }) => {
                 {element.items.map((item) => (
                   <li 
                     key={item.key} 
-                    className={styles.markdownListItem}
+                    className={`${styles.markdownListItem} ${item.isAgendaItem ? styles.agendaListItem : ''}`}
                     dangerouslySetInnerHTML={{ __html: item.content }}
                   />
                 ))}
@@ -623,7 +720,6 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
       const normalizedText = messageText.toLowerCase();
       
       // Check if the message contains a trigger for the registration form
-      // Enhanced detection for [display form] tag
       if (normalizedText.includes('[display form]')) {
         debugLog('Registration form trigger detected!', messageText);
         setShowRegistrationForm(true);
@@ -638,31 +734,41 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isRegistrationPrompt: true
         }]);
-      } else {
-        // Check if the message contains JSON data for speakers
+      }
+      // Check if this is a registration success response
+      else if (normalizedText.includes('successfully registering for tm ai day') || 
+              normalizedText.includes('tm ai day events & agenda')) {
+        setMessages(prev => [...prev, { 
+          id: Date.now(), 
+          text: messageText, 
+          sender: 'bot',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isRegistrationResponse: true,
+          hasMarkdown: true
+        }]);
+      } 
+      // Check if the message contains JSON data for speakers
+      else {
         try {
-          // Look for JSON array pattern in the message
+          // Look for speaker data pattern in the message
           if (messageText.includes('"name"') && messageText.includes('"image_link"')) {
-            const jsonMatch = messageText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            if (jsonMatch) {
-              const jsonStr = jsonMatch[0];
-              const parsedSpeakers = JSON.parse(jsonStr);
+            // Try to parse JSON data
+            const speakersData = tryParseJSON(messageText);
+            
+            if (Array.isArray(speakersData) && speakersData.length > 0) {
+              setSpeakers(speakersData);
               
-              if (Array.isArray(parsedSpeakers) && parsedSpeakers.length > 0) {
-                setSpeakers(parsedSpeakers);
-                
-                // Replace the JSON in the message with a simple notification
-                const cleanMessage = messageText.replace(jsonStr, '').trim();
-                
-                setMessages(prev => [...prev, { 
-                  id: Date.now(), 
-                  text: cleanMessage || 'Here are the speakers for TM AI Day:', 
-                  sender: 'bot',
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  hasSpeakers: true
-                }]);
-                return;
-              }
+              // Replace the JSON in the message with a simple notification
+              const cleanMessage = messageText.replace(/\[\s*\{[\s\S]*\}\s*\]/, '').trim();
+              
+              setMessages(prev => [...prev, { 
+                id: Date.now(), 
+                text: cleanMessage || 'Here are the speakers for TM AI Day:', 
+                sender: 'bot',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                hasSpeakers: true
+              }]);
+              return;
             }
           }
         } catch (jsonError) {
@@ -830,13 +936,18 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
     setShowRegistrationForm(false);
     setIsLoading(true);
     
-    // Add a summary of the submitted information as a user message
-    const userSummary = `Line of Business: ${formData.lob}\nObjective: ${formData.objective}`;
+    // Format the submission message in a cleaner, more structured way
+    const userSummary = `Registration Information:
+Line of Business: ${formData.lob}
+Objective: ${formData.objective}`;
+
     addUserMessage(userSummary);
     
     try {
-      // Send a message with the registration data
-      const registrationMsg = `I want to register with the following information:\nLOB: ${formData.lob}\nObjective: ${formData.objective}`;
+      // Format the registration data for the API
+      const registrationMsg = `I want to register with the following information:
+LOB: ${formData.lob}
+Objective: ${formData.objective}`;
       
       sendChatMessage(tmId, registrationMsg, [], chatHistory)
         .then(response => {
@@ -851,10 +962,21 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
               messageContent = extractMessageFromResponse(response);
             }
             
+            // Clean up any unwanted formatting codes that might be in the response
+            messageContent = messageContent.replace(/\*\*/g, '**'); // Ensure proper bold syntax
+            
             addBotMessage(messageContent);
             updateChatHistory('assistant', messageContent);
           } else {
-            const successMessage = 'Thank you for registering for TM AI Day! Your information has been saved.';
+            const successMessage = `# Registration Successful
+
+Thank you for registering for TM AI Day! Your information has been saved:
+
+* **Line of Business:** ${formData.lob}
+* **Objective:** ${formData.objective}
+
+We're preparing a personalized agenda for you and will update you shortly.`;
+            
             addBotMessage(successMessage);
             updateChatHistory('assistant', successMessage);
           }
@@ -987,6 +1109,16 @@ Welcome to TM AI Day! Would you like to register for the event or find out more 
                       const text = message.text || '';
                       
                       if (typeof text === 'string') {
+                        // Special handling for registration responses
+                        if (message.isRegistrationResponse) {
+                          const markdownElements = parseMarkdown(text);
+                          return (
+                            <div className={styles.registrationResponse}>
+                              <MarkdownRenderer elements={markdownElements} />
+                            </div>
+                          );
+                        }
+                        
                         // Check if message contains an image URL
                         if (message.sender === 'bot' && containsImageUrl(text)) {
                           const imageUrl = extractImageUrl(text);

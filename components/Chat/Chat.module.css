@@ -213,6 +213,21 @@
   line-height: 1.3;
 }
 
+.markdownH4 {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--tm-blue);
+  margin: var(--space-md) 0 var(--space-xs) 0;
+  line-height: 1.3;
+}
+
+.markdownDivider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--tm-light-orange) 0%, var(--tm-orange) 50%, var(--tm-light-orange) 100%);
+  border: none;
+  margin: var(--space-md) 0;
+}
+
 .markdownP {
   margin: 0 0 var(--space-sm) 0;
   line-height: 1.6;
@@ -262,6 +277,77 @@
 .markdownList .markdownList {
   margin: var(--space-xs) 0;
   padding-left: var(--space-md);
+}
+
+/* Specific styles for agenda items */
+.agendaTime, .agendaDesc {
+  margin: var(--space-xs) 0;
+  padding-left: var(--space-md);
+}
+
+.agendaTime {
+  font-weight: 500;
+  color: var(--tm-blue);
+}
+
+.agendaDesc {
+  color: var(--dark-gray);
+  margin-bottom: var(--space-sm);
+}
+
+.agendaListItem {
+  margin-bottom: var(--space-xs);
+}
+
+/* Enhanced styles for registration response container */
+.registrationResponse {
+  background-color: var(--white);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-md);
+  border-left: 4px solid var(--tm-orange);
+  margin: var(--space-md) 0;
+}
+
+.registrationResponse .markdownH1,
+.registrationResponse .markdownH2 {
+  color: var(--tm-blue);
+  border-bottom: 1px solid var(--light-gray);
+  padding-bottom: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.registrationResponse .markdownH3 {
+  color: var(--tm-dark-orange);
+  font-weight: 600;
+}
+
+/* Style for highlighted text in registration responses */
+.registrationResponse strong,
+.registrationResponse b {
+  color: var(--tm-blue);
+  font-weight: 600;
+}
+
+/* Improve list styling in registration responses */
+.registrationResponse .markdownList {
+  margin: var(--space-xs) 0 var(--space-md) 0;
+}
+
+.registrationResponse .markdownList li {
+  margin-bottom: var(--space-sm);
+}
+
+.registrationResponse .markdownList li .agenda-time {
+  display: block;
+  color: var(--tm-blue);
+  font-weight: 500;
+}
+
+.registrationResponse .markdownList li .agenda-desc {
+  display: block;
+  color: var(--dark-gray);
+  margin-top: var(--space-xs);
 }
 
 .messageTime {
@@ -446,28 +532,16 @@
     max-width: 90%;
   }
   
-  .logo {
-    width: 32px;
-    height: 32px;
+  .registrationResponse {
+    padding: var(--space-sm);
+  }
+  
+  .registrationResponse .markdownH4 {
     font-size: var(--font-sm);
   }
   
-  .headerInfo h3 {
-    font-size: var(--font-sm);
-  }
-  
-  .logoutButton, .closeButton {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: var(--font-xs);
-  }
-  
-  .chatHeaderRight {
-    gap: var(--space-xs);
-  }
-  
-  .maximizeButton {
-    width: 30px;
-    height: 30px;
+  .agendaTime, .agendaDesc {
+    padding-left: var(--space-sm);
   }
   
   .imageContainer {
@@ -532,6 +606,10 @@
   
   .drivePreview {
     height: 200px;
+  }
+  
+  .registrationResponse {
+    border-left-width: 3px;
   }
   
   /* More compact markdown on mobile */
