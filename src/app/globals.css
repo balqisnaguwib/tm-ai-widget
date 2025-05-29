@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
+  --tm-blue: #0066cc;
+  --tm-blue-dark: #004d99;
+  --tm-blue-light: #3385d6;
+  --tm-orange: #ff6600;
+  --tm-orange-dark: #cc5200;
+  --tm-orange-light: #ff8533;
   --background: #ffffff;
   --foreground: #171717;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
 }
 
 @theme inline {
@@ -10,17 +19,102 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-tm-blue: #0066cc;
+  --color-tm-blue-dark: #004d99;
+  --color-tm-blue-light: #3385d6;
+  --color-tm-orange: #ff6600;
+  --color-tm-orange-dark: #cc5200;
+  --color-tm-orange-light: #ff8533;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --card-bg: rgba(0, 0, 0, 0.9);
+    --glass-bg: rgba(0, 0, 0, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.1);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* iOS-like animations */
+.ios-transition {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.ios-spring {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.glass-morphism {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tm-blue);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tm-blue-dark);
+}
+
+/* Gradient backgrounds */
+.tm-gradient {
+  background: linear-gradient(135deg, var(--tm-blue) 0%, var(--tm-orange) 100%);
+}
+
+.tm-gradient-reverse {
+  background: linear-gradient(135deg, var(--tm-orange) 0%, var(--tm-blue) 100%);
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--tm-blue);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--tm-orange);
+  }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Chat widget specific styles */
+.chat-widget {
+  box-shadow: 0 20px 60px rgba(0, 102, 204, 0.3);
 }

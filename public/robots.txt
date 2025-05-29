@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Host
+Host: https://ai.tm.com.my
+
+# Sitemaps
+Sitemap: https://ai.tm.com.my/sitemap.xml
