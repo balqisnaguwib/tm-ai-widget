@@ -44,17 +44,31 @@ export default function ChatInterface({
     scrollToBottom();
   }, [chatHistory]);
 
+  // Debug: Log chat history changes
+  useEffect(() => {
+    console.log('Chat history updated:', chatHistory.map(m => ({ role: m.role, content: m.content.substring(0, 50) + '...' })));
+  }, [chatHistory]);
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
+    const currentMessage = inputMessage.trim(); // Store the message before clearing
+    setInputMessage(''); // Clear input immediately
+    
     const userMessage: ChatMessage = {
       role: 'user',
-      content: inputMessage,
+      content: currentMessage,
       timestamp: new Date(),
     };
 
+    // Add user message to chat history first
+    console.log('Adding user message:', userMessage);
+    console.log('Current chat history length:', chatHistory.length);
     onNewMessage(userMessage);
-    setInputMessage('');
+    
+    // Add a small delay to ensure the user message is rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     setIsLoading(true);
 
     try {
@@ -67,15 +81,27 @@ export default function ChatInterface({
       const { sendChatMessage, handleApiError } = await import('../utils/api');
       const result = await sendChatMessage({
         tm_id: userData.tm_id,
-        message: inputMessage,
+        message: currentMessage,
         chat_history: apiChatHistory,
       });
 
+      // Debug: Log the API response to understand its structure
+      console.log('API Response:', result);
+
       if (result.status === 'success' && result.message) {
-        let content = result.message;
+        // Extract content from the message object
+        let content: string;
+        if (typeof result.message === 'string') {
+          content = result.message;
+        } else if (result.message && typeof result.message === 'object' && 'content' in result.message) {
+          content = result.message.content;
+        } else {
+          console.warn('Unexpected message format:', result.message);
+          content = 'I received a response but couldn\'t process it properly. Please try again.';
+        }
         
         // Check if response contains speaker information
-        if (content.includes('speakers') || content.includes('speaker')) {
+        if (typeof content === 'string' && (content.includes('speakers') || content.includes('speaker'))) {
           try {
             // Try to parse speaker data from JSON in the response
             const speakerRegex = /"name":\s*"([^"]+)"/g;
@@ -118,7 +144,7 @@ export default function ChatInterface({
               content = "Here are our amazing speakers for TM AI Day 2025:";
             }
           } catch (e) {
-            console.log('Could not parse speaker data');
+            console.log('Could not parse speaker data:', e);
           }
         }
 
@@ -128,16 +154,19 @@ export default function ChatInterface({
           timestamp: new Date(),
         };
 
+        console.log('Adding assistant message:', assistantMessage);
+        console.log('Chat history before adding assistant:', chatHistory.length);
         onNewMessage(assistantMessage);
       } else {
         const errorMessage: ChatMessage = {
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
+          content: result.message || 'Sorry, I encountered an error. Please try again.',
           timestamp: new Date(),
         };
         onNewMessage(errorMessage);
       }
     } catch (error) {
+      console.error('Chat error:', error);
       const { handleApiError } = await import('../utils/api');
       const errorMessage: ChatMessage = {
         role: 'assistant',
@@ -158,6 +187,15 @@ export default function ChatInterface({
   };
 
   const showFloorPlan = () => {
+    // Add user message first
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: 'Show me the floor plan',
+      timestamp: new Date(),
+    };
+    onNewMessage(userMessage);
+    
+    // Then add the floor plan response
     const floorPlanMessage: ChatMessage = {
       role: 'assistant',
       content: 'Here is the floor plan for TM AI Day 2025:',
@@ -232,64 +270,76 @@ export default function ChatInterface({
 
       {/* Messages */}
       <div className={messagesContainerClasses}>
+        {/* Debug: Show chat history info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded mb-2">
+            Chat History: {Array.isArray(chatHistory) ? chatHistory.length : 'NOT ARRAY'} messages
+          </div>
+        )}
+        
         <AnimatePresence>
-          {chatHistory.map((message, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                {/* Avatar */}
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-                  ${message.role === 'user' ? 'bg-tm-blue' : 'tm-gradient'}
-                `}>
-                  {message.role === 'user' ? (
-                    <User className="text-white" size={16} />
-                  ) : (
-                    <Bot className="text-white" size={16} />
-                  )}
-                </div>
+          {(Array.isArray(chatHistory) ? chatHistory : []).map((message, index) => {
+            // Create a more unique key to prevent React from reusing components
+            const messageKey = `${message.role}-${index}-${message.timestamp.getTime()}`;
+            
+            return (
+              <motion.div
+                key={messageKey}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                  {/* Avatar */}
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+                    ${message.role === 'user' ? 'bg-tm-blue' : 'tm-gradient'}
+                  `}>
+                    {message.role === 'user' ? (
+                      <User className="text-white" size={16} />
+                    ) : (
+                      <Bot className="text-white" size={16} />
+                    )}
+                  </div>
 
-                {/* Message Content */}
-                <div className={`
-                  px-4 py-2 rounded-2xl
-                  ${message.role === 'user' 
-                    ? 'bg-tm-blue text-white' 
-                    : 'bg-white/50 dark:bg-gray-800/50 text-gray-800 dark:text-white'
-                  }
-                `}>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                  </p>
-                  
-                  {/* Floor Plan Image */}
-                  {message.content.includes('floor plan') && message.role === 'assistant' && (
-                    <div className="mt-3">
-                      <img
-                        src="https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg"
-                        alt="TM AI Day Floor Plan"
-                        className="rounded-lg max-w-full h-auto"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <span className="text-xs opacity-70 mt-1 block">
-                    {new Date(message.timestamp).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
+                  {/* Message Content */}
+                  <div className={`
+                    px-4 py-2 rounded-2xl
+                    ${message.role === 'user' 
+                      ? 'bg-tm-blue text-white' 
+                      : 'bg-white/50 dark:bg-gray-800/50 text-gray-800 dark:text-white'
+                    }
+                  `}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {message.content}
+                    </p>
+                    
+                    {/* Floor Plan Image */}
+                    {message.content.includes('floor plan') && message.role === 'assistant' && (
+                      <div className="mt-3">
+                        <img
+                          src="https://ai.tm.com.my/AI-Day/AI-DAY-floor-plan.jpeg"
+                          alt="TM AI Day Floor Plan"
+                          className="rounded-lg max-w-full h-auto"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    <span className="text-xs opacity-70 mt-1 block">
+                      {new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
 
         {/* Speaker Cards */}
