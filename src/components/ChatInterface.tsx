@@ -1,8 +1,6 @@
-'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, RotateCcw, User, Bot, Image as ImageIcon, Users } from 'lucide-react';
+import { Send, RotateCcw, User, Bot, Image, Users } from 'lucide-react';
 import { UserData, ChatMessage } from './ChatWidget';
 import SpeakerCard from './SpeakerCard';
 
@@ -13,6 +11,7 @@ interface ChatInterfaceProps {
   userScore: number;
   onNewMessage: (message: ChatMessage) => void;
   onReset: () => void;
+  isMaximized?: boolean;
 }
 
 interface Speaker {
@@ -29,6 +28,7 @@ export default function ChatInterface({
   userScore,
   onNewMessage,
   onReset,
+  isMaximized = false,
 }: ChatInterfaceProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -166,8 +166,18 @@ export default function ChatInterface({
     onNewMessage(floorPlanMessage);
   };
 
+  // Adjust container size based on maximize state
+  const containerClasses = isMaximized 
+    ? "flex flex-col h-full max-h-[calc(100vh-4rem)]" 
+    : "flex flex-col h-full max-h-[calc(100vh-12rem)]";
+
+  // Adjust message display area based on maximize state
+  const messagesContainerClasses = isMaximized
+    ? "flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-14rem)]"
+    : "flex-1 overflow-y-auto p-4 space-y-4";
+
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-12rem)]">
+    <div className={containerClasses}>
       {/* User Info Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between">
@@ -208,7 +218,7 @@ export default function ChatInterface({
             onClick={showFloorPlan}
             className="px-3 py-1 text-xs bg-tm-orange/10 text-tm-orange rounded-full hover:bg-tm-orange/20 ios-transition flex items-center space-x-1"
           >
-            <ImageIcon size={12} />
+            <Image size={12} />
             <span>Floor Plan</span>
           </button>
           <button
@@ -221,7 +231,7 @@ export default function ChatInterface({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className={messagesContainerClasses}>
         <AnimatePresence>
           {chatHistory.map((message, index) => (
             <motion.div
@@ -291,9 +301,12 @@ export default function ChatInterface({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-3"
             >
-              {speakers.map((speaker, index) => (
-                <SpeakerCard key={index} speaker={speaker} delay={index * 0.1} />
-              ))}
+              {/* Display in grid if maximized, otherwise stack */}
+              <div className={isMaximized ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+                {speakers.map((speaker, index) => (
+                  <SpeakerCard key={index} speaker={speaker} delay={index * 0.1} />
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

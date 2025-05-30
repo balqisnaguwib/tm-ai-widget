@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, LogIn, Loader } from 'lucide-react';
@@ -7,9 +5,10 @@ import { UserData } from './ChatWidget';
 
 interface LoginFormProps {
   onLogin: (userData: UserData) => void;
+  isMaximized?: boolean;
 }
 
-export default function LoginForm({ onLogin }: LoginFormProps) {
+export default function LoginForm({ onLogin, isMaximized = false }: LoginFormProps) {
   const [formData, setFormData] = useState({
     login: '',
     password: '',
@@ -48,8 +47,13 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setError(''); // Clear error when user types
   };
 
+  // Adjust container height based on maximize state
+  const containerClass = isMaximized 
+    ? "p-6 h-full max-h-[calc(100vh-4rem)] overflow-y-auto"
+    : "p-6 h-full max-h-[calc(100vh-12rem)] overflow-y-auto";
+
   return (
-    <div className="p-6 h-full max-h-[calc(100vh-12rem)] overflow-y-auto">
+    <div className={containerClass}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -74,7 +78,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {/* Username/Staff ID */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -123,6 +127,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   text-gray-800 dark:text-white
                   placeholder-gray-500
                 `}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSubmit(e);
+                  }
+                }}
               />
               <button
                 type="button"
@@ -149,7 +158,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            type="submit"
+            onClick={handleSubmit}
             disabled={isLoading}
             className={`
               w-full py-3 px-4 rounded-xl font-medium
@@ -171,7 +180,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               </>
             )}
           </motion.button>
-        </form>
+        </div>
 
         {/* Help Text */}
         <motion.div

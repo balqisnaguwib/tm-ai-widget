@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, CheckCircle, Loader, Brain } from 'lucide-react';
@@ -8,6 +6,7 @@ import { UserData } from './ChatWidget';
 interface SurveyFormProps {
   userData: UserData;
   onComplete: (level: string, score: number, welcomeMessage: string) => void;
+  isMaximized?: boolean;
 }
 
 const surveyQuestions = [
@@ -63,7 +62,7 @@ const surveyQuestions = [
   }
 ];
 
-export default function SurveyForm({ userData, onComplete }: SurveyFormProps) {
+export default function SurveyForm({ userData, onComplete, isMaximized = false }: SurveyFormProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [selectedAnswer, setSelectedAnswer] = useState('');
@@ -124,8 +123,13 @@ export default function SurveyForm({ userData, onComplete }: SurveyFormProps) {
 
   const progress = ((currentQuestion + 1) / surveyQuestions.length) * 100;
 
+  // Adjust container height based on maximize state
+  const containerClass = isMaximized 
+    ? "p-6 h-full max-h-[calc(100vh-4rem)] overflow-y-auto"
+    : "p-6 h-full max-h-[calc(100vh-12rem)] overflow-y-auto";
+
   return (
-    <div className="p-6 h-full max-h-[calc(100vh-12rem)] overflow-y-auto">
+    <div className={containerClass}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

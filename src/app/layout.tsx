@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TM AI Day 2025 - Powered by Telekom Malaysia",
+  title: "TM AI Day 2025 - Powered by AI Centre of Exellence",
   description: "Join us for TM AI Day 2025 on July 2nd, 2025. Experience the future of artificial intelligence with Telekom Malaysia. Connect with our AI assistant to learn more, register, and get personalized recommendations.",
   keywords: "TM, Telekom Malaysia, AI Day, Artificial Intelligence, Technology, Innovation, 2025",
   authors: [{ name: "Telekom Malaysia" }],

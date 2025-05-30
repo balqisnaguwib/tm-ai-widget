@@ -77,7 +77,7 @@ export default function Home() {
               transition={{ delay: 0.6, duration: 0.8 }}
               className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-12"
             >
-              Powered by Telekom Malaysia
+              Powered by AI Centre of Excellence
             </motion.p>
 
             {/* Countdown Timer */}

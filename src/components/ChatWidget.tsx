@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Minimize2, Maximize2 } from 'lucide-react';
@@ -29,7 +27,10 @@ export interface ChatMessage {
 
 export default function ChatWidget() {
   const [chatState, setChatState] = useState<ChatState>('closed');
-  const [isMinimized, setIsMinimized] = useState(false);
+  // Store the last active state to restore it when reopening
+  const [lastActiveState, setLastActiveState] = useState<ChatState>('login');
+  // We'll use a single state to track widget size mode: 'normal', 'minimized', or 'maximized'
+  const [sizeMode, setSizeMode] = useState<'normal' | 'minimized' | 'maximized'>('normal');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [userLevel, setUserLevel] = useState('');
@@ -46,7 +47,7 @@ export default function ChatWidget() {
 
       if (storedUserData) {
         setUserData(storedUserData);
-        setChatState('chat');
+        setLastActiveState('chat'); // Set initial active state if user is logged in
       }
       if (storedChatHistory.length > 0) {
         setChatHistory(storedChatHistory);
@@ -66,6 +67,7 @@ export default function ChatWidget() {
       userStorage.setUserData(user);
     });
     setChatState('survey');
+    setLastActiveState('survey'); // Update last active state
   };
 
   const handleSurveyComplete = (level: string, score: number, welcomeMessage: string) => {
@@ -88,6 +90,7 @@ export default function ChatWidget() {
     });
     
     setChatState('chat');
+    setLastActiveState('chat'); // Update last active state
   };
 
   const handleNewMessage = (message: ChatMessage) => {
@@ -107,19 +110,45 @@ export default function ChatWidget() {
     setUserLevel('');
     setUserScore(0);
     setChatState('login');
+    setLastActiveState('login'); // Update last active state
   };
 
   const toggleWidget = () => {
     if (chatState === 'closed') {
-      setChatState(userData ? 'chat' : 'login');
+      // Reopen to the last active state
+      setChatState(lastActiveState);
     } else {
+      // Save current state before closing
+      setLastActiveState(chatState);
       setChatState('closed');
     }
-    setIsMinimized(false);
+    setSizeMode('normal');
   };
 
   const toggleMinimize = () => {
-    setIsMinimized(!isMinimized);
+    // If already minimized, go back to normal
+    if (sizeMode === 'minimized') {
+      setSizeMode('normal');
+    } 
+    // If maximized, go to normal
+    else if (sizeMode === 'maximized') {
+      setSizeMode('normal');
+    }
+    // If normal, go to minimized
+    else {
+      setSizeMode('minimized');
+    }
+  };
+
+  const toggleMaximize = () => {
+    // If already maximized, go back to normal
+    if (sizeMode === 'maximized') {
+      setSizeMode('normal');
+    }
+    // If minimized or normal, go to maximized
+    else {
+      setSizeMode('maximized');
+    }
   };
 
   return (
@@ -158,18 +187,21 @@ export default function ChatWidget() {
             animate={{ 
               x: 0, 
               opacity: 1,
-              height: isMinimized ? '60px' : 'auto'
+              height: sizeMode === 'minimized' ? '60px' : 'auto'
             }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className={`
-              fixed right-6 z-50 w-96 max-w-[calc(100vw-3rem)]
-              glass-morphism rounded-3xl shadow-2xl overflow-hidden
-              chat-widget
-              ${isMinimized ? 'bottom-6' : 'bottom-6 top-6'}
+              fixed z-50 
+              glass-morphism shadow-2xl overflow-hidden chat-widget
+              ${sizeMode === 'maximized' 
+                ? 'inset-0 rounded-none' 
+                : 'bottom-6 right-6 w-96 max-w-[calc(100vw-3rem)] rounded-3xl'
+              }
+              ${sizeMode === 'minimized' ? 'top-auto h-[60px]' : sizeMode === 'normal' ? 'top-6' : ''}
             `}
           >
-            {/* Header */}
+            {/* Header - Always visible */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 tm-gradient rounded-full flex items-center justify-center">
@@ -190,12 +222,21 @@ export default function ChatWidget() {
                 <button
                   onClick={toggleMinimize}
                   className="p-2 rounded-full hover:bg-white/10 ios-transition"
+                  title={sizeMode === 'minimized' ? "Restore" : "Minimize"}
                 >
-                  {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+                  {sizeMode === 'minimized' ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+                </button>
+                <button
+                  onClick={toggleMaximize}
+                  className="p-2 rounded-full hover:bg-white/10 ios-transition"
+                  title={sizeMode === 'maximized' ? "Restore" : "Maximize"}
+                >
+                  {sizeMode === 'maximized' ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                 </button>
                 <button
                   onClick={toggleWidget}
                   className="p-2 rounded-full hover:bg-white/10 ios-transition"
+                  title="Close"
                 >
                   <X size={16} />
                 </button>
@@ -204,23 +245,27 @@ export default function ChatWidget() {
 
             {/* Content */}
             <AnimatePresence mode="wait">
-              {!isMinimized && (
+              {sizeMode !== 'minimized' && (
                 <motion.div
                   key={chatState}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
-                  className="h-full"
+                  className={`h-full ${sizeMode === 'maximized' ? 'max-h-[calc(100vh-4rem)]' : ''}`}
                 >
                   {chatState === 'login' && (
-                    <LoginForm onLogin={handleLogin} />
+                    <LoginForm 
+                      onLogin={handleLogin} 
+                      isMaximized={sizeMode === 'maximized'}
+                    />
                   )}
                   
                   {chatState === 'survey' && userData && (
                     <SurveyForm 
                       userData={userData} 
                       onComplete={handleSurveyComplete}
+                      isMaximized={sizeMode === 'maximized'}
                     />
                   )}
                   
@@ -232,6 +277,7 @@ export default function ChatWidget() {
                       userScore={userScore}
                       onNewMessage={handleNewMessage}
                       onReset={handleReset}
+                      isMaximized={sizeMode === 'maximized'}
                     />
                   )}
                 </motion.div>
