@@ -191,8 +191,6 @@ export default function LoginForm({ onLogin, isMaximized = false }: LoginFormPro
         >
           <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
             Use your TM corporate login credentials. 
-            <br />
-            Having trouble? Contact IT support.
           </p>
         </motion.div>
       </motion.div>

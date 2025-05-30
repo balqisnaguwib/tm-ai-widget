@@ -235,8 +235,20 @@ export default function ChatWidget() {
                     transition={{ duration: 0.2 }}
                   >
                     <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/30">
-                      <div className="w-8 h-8 bg-gradient-to-br from-white to-white/80 rounded-xl flex items-center justify-center">
-                        <span className="text-tm-blue text-sm font-bold">TM</span>
+                      <div className="w-8 h-8 bg-gradient-to-br from-white to-white/80 rounded-xl flex items-center justify-center p-1">
+                        <img
+                          src="/tm-logo.png"
+                          alt="TM Logo"
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            // Fallback to text if image fails to load
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              parent.innerHTML = '<span class="text-tm-blue text-sm font-bold">TM</span>';
+                            }
+                          }}
+                        />
                       </div>
                     </div>
                     {/* Online Status Indicator */}

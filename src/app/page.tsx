@@ -56,8 +56,20 @@ export default function Home() {
               transition={{ delay: 0.2, duration: 0.6, type: "spring", stiffness: 200 }}
               className="mb-8"
             >
-              <div className="w-24 h-24 mx-auto tm-gradient rounded-full flex items-center justify-center shadow-2xl">
-                <span className="text-white text-3xl font-bold">TM</span>
+              <div className="w-24 h-24 mx-auto tm-gradient rounded-full flex items-center justify-center shadow-2xl p-3">
+                <img
+                  src="/tm-logo.png"
+                  alt="TM Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to text if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<span class="text-white text-3xl font-bold">TM</span>';
+                    }
+                  }}
+                />
               </div>
             </motion.div>
 

@@ -64,6 +64,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://llm.nnoc.cloud" />
         <link rel="preconnect" href="https://ai.tm.com.my" />
         
+        {/* Preload TM Logo for better performance */}
+        <link rel="preload" href="/tm-logo.png" as="image" type="image/png" />
+        
         {/* iOS PWA meta tags */}
         <meta name="apple-touch-fullscreen" content="yes" />
         <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
