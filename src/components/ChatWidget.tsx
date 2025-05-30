@@ -186,61 +186,115 @@ export default function ChatWidget() {
             initial={{ x: '100%', opacity: 0 }}
             animate={{ 
               x: 0, 
-              opacity: 1,
-              height: sizeMode === 'minimized' ? '60px' : 'auto'
+              opacity: 1
             }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className={`
-              fixed z-50 
-              glass-morphism shadow-2xl overflow-hidden chat-widget
+              fixed z-50 flex flex-col
+              glass-morphism shadow-2xl chat-widget
               ${sizeMode === 'maximized' 
                 ? 'inset-0 rounded-none' 
                 : 'bottom-6 right-6 w-96 max-w-[calc(100vw-3rem)] rounded-3xl'
               }
-              ${sizeMode === 'minimized' ? 'top-auto h-[60px]' : sizeMode === 'normal' ? 'top-6' : ''}
+              ${sizeMode === 'minimized' 
+                ? 'top-auto h-[60px] overflow-hidden' 
+                : sizeMode === 'normal' 
+                ? 'top-6 h-[80vh] max-h-[600px]' 
+                : 'h-screen'
+              }
             `}
           >
-            {/* Header - Always visible */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 tm-gradient rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">TM</span>
+            {/* Header - Always visible and fixed */}
+            <div className={`flex-shrink-0 relative ${sizeMode === 'maximized' ? '' : 'rounded-t-3xl'} overflow-hidden`}>
+              {/* Header Background with Gradient */}
+              <div className="absolute inset-0 tm-gradient opacity-90"></div>
+              <div className="absolute inset-0 bg-white/20 backdrop-blur-xl"></div>
+              
+              {/* Header Content */}
+              <div className="relative flex items-center justify-between p-4 border-b border-white/20">
+                <div className="flex items-center space-x-4">
+                  {/* Enhanced Logo */}
+                  <motion.div 
+                    className="relative"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg border border-white/30">
+                      <div className="w-8 h-8 bg-gradient-to-br from-white to-white/80 rounded-xl flex items-center justify-center">
+                        <span className="text-tm-blue text-sm font-bold">TM</span>
+                      </div>
+                    </div>
+                    {/* Online Status Indicator */}
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
+                  </motion.div>
+                  
+                  {/* Title and User Info */}
+                  <div className="flex-1">
+                    <motion.h3 
+                      className="font-bold text-white text-lg tracking-tight"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      TM AI Assistant
+                    </motion.h3>
+                    {userData && sizeMode !== 'minimized' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center space-x-2"
+                      >
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <p className="text-white/90 text-sm font-medium">
+                          {userData.name}
+                        </p>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-white">
-                    TM AI Assistant
-                  </h3>
-                  {userData && (
-                    <p className="text-xs text-gray-500">
-                      Welcome, {userData.name}
-                    </p>
-                  )}
+                
+                {/* Control Buttons */}
+                <div className="flex items-center space-x-1">
+                  <motion.button
+                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleMinimize}
+                    className="p-2.5 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 hover:border-white/40 ios-transition shadow-lg text-white"
+                    title={sizeMode === 'minimized' ? "Restore" : "Minimize"}
+                  >
+                    {sizeMode === 'minimized' ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleMaximize}
+                    className="p-2.5 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 hover:border-white/40 ios-transition shadow-lg text-white"
+                    title={sizeMode === 'maximized' ? "Restore" : "Maximize"}
+                  >
+                    {sizeMode === 'maximized' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ 
+                      scale: 1.1, 
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      borderColor: 'rgba(239, 68, 68, 0.4)'
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleWidget}
+                    className="p-2.5 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 hover:border-red-400/40 ios-transition shadow-lg text-white hover:text-red-300"
+                    title="Close"
+                  >
+                    <X size={14} />
+                  </motion.button>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={toggleMinimize}
-                  className="p-2 rounded-full hover:bg-white/10 ios-transition"
-                  title={sizeMode === 'minimized' ? "Restore" : "Minimize"}
-                >
-                  {sizeMode === 'minimized' ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
-                </button>
-                <button
-                  onClick={toggleMaximize}
-                  className="p-2 rounded-full hover:bg-white/10 ios-transition"
-                  title={sizeMode === 'maximized' ? "Restore" : "Maximize"}
-                >
-                  {sizeMode === 'maximized' ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                </button>
-                <button
-                  onClick={toggleWidget}
-                  className="p-2 rounded-full hover:bg-white/10 ios-transition"
-                  title="Close"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              
+              {/* Decorative Elements */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
             </div>
 
             {/* Content */}
@@ -252,7 +306,7 @@ export default function ChatWidget() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
-                  className={`h-full ${sizeMode === 'maximized' ? 'max-h-[calc(100vh-4rem)]' : ''}`}
+                  className="flex-1 overflow-hidden"
                 >
                   {chatState === 'login' && (
                     <LoginForm 
