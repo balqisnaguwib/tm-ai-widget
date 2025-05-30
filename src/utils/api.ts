@@ -21,13 +21,19 @@ async function apiRequest<T>(
   };
 
   try {
+    console.log('Making API request to:', url);
+    console.log('Request config:', config);
+    
     const response = await fetch(url, config);
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API request failed:', response.status, errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
+    console.log('API response:', data);
     return data;
   } catch (error) {
     console.error('API Request Error:', error);
@@ -95,23 +101,34 @@ export interface ChatRequest {
   }>;
 }
 
+// Updated interface to match your API response structure
 export interface ChatResponse {
   status: string;
-  message?: string;
+  message?: string | {
+    role: string;
+    content: string;
+  };
   level?: string;
   score?: number;
   competency_status?: string;
 }
 
 export const sendChatMessage = async (chatData: ChatRequest): Promise<ChatResponse> => {
-  return apiRequest<ChatResponse>('/chat', {
+  console.log('Sending chat message with data:', chatData);
+  
+  const response = await apiRequest<ChatResponse>('/chat', {
     method: 'POST',
     body: JSON.stringify(chatData),
   });
+  
+  console.log('Chat API response:', response);
+  return response;
 };
 
 // Error handling utility
 export const handleApiError = (error: any): string => {
+  console.error('API Error:', error);
+  
   if (error instanceof Error) {
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       return 'Network error. Please check your connection and try again.';

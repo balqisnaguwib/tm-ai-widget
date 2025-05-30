@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Minimize2, Maximize2 } from 'lucide-react';
 import LoginForm from './LoginForm';
@@ -93,13 +93,22 @@ export default function ChatWidget() {
     setLastActiveState('chat'); // Update last active state
   };
 
-  const handleNewMessage = (message: ChatMessage) => {
-    const newHistory = [...chatHistory, message];
-    setChatHistory(newHistory);
-    import('../utils/storage').then(({ userStorage }) => {
-      userStorage.setChatHistory(newHistory);
+  // Use useCallback to ensure the function reference is stable
+  const handleNewMessage = useCallback((message: ChatMessage) => {
+    console.log('ChatWidget: handleNewMessage called with:', message);
+    
+    setChatHistory(prevHistory => {
+      const newHistory = [...prevHistory, message];
+      console.log('ChatWidget: Updating chat history from', prevHistory.length, 'to', newHistory.length, 'messages');
+      
+      // Save to storage
+      import('../utils/storage').then(({ userStorage }) => {
+        userStorage.setChatHistory(newHistory);
+      });
+      
+      return newHistory;
     });
-  };
+  }, []);
 
   const handleReset = () => {
     import('../utils/storage').then(({ userStorage }) => {
@@ -150,6 +159,11 @@ export default function ChatWidget() {
       setSizeMode('maximized');
     }
   };
+
+  // Debug logging for chat history changes
+  useEffect(() => {
+    console.log('ChatWidget: Chat history changed, length:', chatHistory.length);
+  }, [chatHistory]);
 
   return (
     <>

@@ -52,7 +52,7 @@ export default function ChatInterface({
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
-    const currentMessage = inputMessage.trim(); // Store the message before clearing
+    const currentMessage = inputMessage.trim();
     setInputMessage(''); // Clear input immediately
     
     const userMessage: ChatMessage = {
@@ -61,22 +61,21 @@ export default function ChatInterface({
       timestamp: new Date(),
     };
 
-    // Add user message to chat history first
+    // Add user message to chat history immediately
     console.log('Adding user message:', userMessage);
-    console.log('Current chat history length:', chatHistory.length);
     onNewMessage(userMessage);
-    
-    // Add a small delay to ensure the user message is rendered
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     setIsLoading(true);
 
     try {
-      // Prepare chat history for API
-      const apiChatHistory = chatHistory.map(msg => ({
+      // Prepare chat history for API - include the new user message we just added
+      const updatedHistory = [...chatHistory, userMessage];
+      const apiChatHistory = updatedHistory.map(msg => ({
         role: msg.role,
         content: msg.content,
       }));
+
+      console.log('Sending API request with chat history:', apiChatHistory);
 
       const { sendChatMessage, handleApiError } = await import('../utils/api');
       const result = await sendChatMessage({
@@ -85,16 +84,17 @@ export default function ChatInterface({
         chat_history: apiChatHistory,
       });
 
-      // Debug: Log the API response to understand its structure
       console.log('API Response:', result);
 
       if (result.status === 'success' && result.message) {
-        // Extract content from the message object
+        // Handle the response based on the actual API response structure
         let content: string;
-        if (typeof result.message === 'string') {
-          content = result.message;
-        } else if (result.message && typeof result.message === 'object' && 'content' in result.message) {
+        
+        // Based on your example, result.message is an object with role and content
+        if (typeof result.message === 'object' && result.message.content) {
           content = result.message.content;
+        } else if (typeof result.message === 'string') {
+          content = result.message;
         } else {
           console.warn('Unexpected message format:', result.message);
           content = 'I received a response but couldn\'t process it properly. Please try again.';
@@ -155,7 +155,6 @@ export default function ChatInterface({
         };
 
         console.log('Adding assistant message:', assistantMessage);
-        console.log('Chat history before adding assistant:', chatHistory.length);
         onNewMessage(assistantMessage);
       } else {
         const errorMessage: ChatMessage = {
@@ -277,17 +276,17 @@ export default function ChatInterface({
           </div>
         )}
         
-        <AnimatePresence>
+        <AnimatePresence mode="sync">
           {(Array.isArray(chatHistory) ? chatHistory : []).map((message, index) => {
-            // Create a more unique key to prevent React from reusing components
-            const messageKey = `${message.role}-${index}-${message.timestamp.getTime()}`;
+            // Create a more unique key that won't change when re-rendering
+            const messageKey = `${message.role}-${index}-${message.content.substring(0, 20)}`;
             
             return (
               <motion.div
                 key={messageKey}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
