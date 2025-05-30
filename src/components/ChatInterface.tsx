@@ -91,7 +91,7 @@ export default function ChatInterface({
         let content: string;
         
         // Based on your example, result.message is an object with role and content
-        if (typeof result.message === 'object' && result.message.content) {
+        if (typeof result.message === 'object' && 'content' in result.message && result.message.content) {
           content = result.message.content;
         } else if (typeof result.message === 'string') {
           content = result.message;
@@ -157,9 +157,19 @@ export default function ChatInterface({
         console.log('Adding assistant message:', assistantMessage);
         onNewMessage(assistantMessage);
       } else {
+        // Handle error case - ensure we get a string for content
+        let errorContent: string;
+        if (typeof result.message === 'string') {
+          errorContent = result.message;
+        } else if (typeof result.message === 'object' && result.message && 'content' in result.message && result.message.content) {
+          errorContent = result.message.content;
+        } else {
+          errorContent = 'Sorry, I encountered an error. Please try again.';
+        }
+        
         const errorMessage: ChatMessage = {
           role: 'assistant',
-          content: result.message || 'Sorry, I encountered an error. Please try again.',
+          content: errorContent,
           timestamp: new Date(),
         };
         onNewMessage(errorMessage);

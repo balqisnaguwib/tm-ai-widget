@@ -15,6 +15,7 @@ export default function BackgroundAnimation() {
 
     // Set canvas size
     const resizeCanvas = () => {
+      if (!canvas) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
@@ -31,10 +32,14 @@ export default function BackgroundAnimation() {
       radius: number;
       color: string;
       opacity: number;
+      canvasWidth: number;
+      canvasHeight: number;
 
-      constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+      constructor(canvasWidth: number, canvasHeight: number) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        this.x = Math.random() * canvasWidth;
+        this.y = Math.random() * canvasHeight;
         this.vx = (Math.random() - 0.5) * 0.5;
         this.vy = (Math.random() - 0.5) * 0.5;
         this.radius = Math.random() * 2 + 1;
@@ -46,12 +51,12 @@ export default function BackgroundAnimation() {
         this.x += this.vx;
         this.y += this.vy;
 
-        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        if (this.x < 0 || this.x > this.canvasWidth) this.vx *= -1;
+        if (this.y < 0 || this.y > this.canvasHeight) this.vy *= -1;
 
         // Keep particles within bounds
-        this.x = Math.max(0, Math.min(canvas.width, this.x));
-        this.y = Math.max(0, Math.min(canvas.height, this.y));
+        this.x = Math.max(0, Math.min(this.canvasWidth, this.x));
+        this.y = Math.max(0, Math.min(this.canvasHeight, this.y));
       }
 
       draw(ctx: CanvasRenderingContext2D) {
@@ -70,11 +75,13 @@ export default function BackgroundAnimation() {
     const particleCount = Math.min(100, Math.floor((canvas.width * canvas.height) / 10000));
 
     for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle());
+      particles.push(new Particle(canvas.width, canvas.height));
     }
 
     // Animation loop
     const animate = () => {
+      if (!canvas || !ctx) return;
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw connections
